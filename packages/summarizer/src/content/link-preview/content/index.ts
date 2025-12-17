@@ -1,6 +1,7 @@
 import type { FirecrawlScrapeResult, LinkPreviewDeps } from '../deps.js'
 import { resolveTranscriptForLink } from '../transcript/index.js'
-import type { CacheMode, FirecrawlDiagnostics } from '../types.js'
+import { isYouTubeUrl } from '../transcript/utils.js'
+import type { FirecrawlDiagnostics } from '../types.js'
 
 import { extractArticleContent } from './article.js'
 import { normalizeForPrompt } from './cleaner.js'
@@ -12,14 +13,17 @@ import {
   ensureTranscriptDiagnostics,
   finalizeExtractedLinkContent,
   pickFirstText,
-  resolveCacheMode,
   resolveMaxCharacters,
+  resolveTimeoutMs,
   safeHostname,
   selectBaseContent,
 } from './utils.js'
 import { extractYouTubeShortDescription } from './youtube.js'
 
 const LEADING_CONTROL_PATTERN = /^[\\s\\p{Cc}]+/u
+const BLOCKED_HTML_HINT_PATTERN =
+  /access denied|attention required|captcha|cloudflare|enable javascript|forbidden|please turn javascript on|verify you are human/i
+const MIN_HTML_CONTENT_CHARACTERS = 200
 
 function stripLeadingTitle(content: string, title: string | null | undefined): string {
   if (!(content && title)) {
@@ -41,45 +45,95 @@ function stripLeadingTitle(content: string, title: string | null | undefined): s
   return remainder
 }
 
+function shouldFallbackToFirecrawl(html: string): boolean {
+  if (BLOCKED_HTML_HINT_PATTERN.test(html)) {
+    return true
+  }
+  const normalized = normalizeForPrompt(extractArticleContent(html))
+  return normalized.length < MIN_HTML_CONTENT_CHARACTERS
+}
+
 export async function fetchLinkContent(
   url: string,
   options: FetchLinkContentOptions | undefined,
   deps: LinkPreviewDeps
 ): Promise<ExtractedLinkContent> {
   const maxCharacters = resolveMaxCharacters(options)
-  const cacheMode = resolveCacheMode(options)
+  const timeoutMs = resolveTimeoutMs(options)
+  const youtubeTranscriptMode = options?.youtubeTranscript ?? 'auto'
 
-  const firecrawlAttempt = await fetchWithFirecrawl(url, cacheMode, deps.scrapeWithFirecrawl)
+  let html: string | null = null
+  let htmlError: unknown = null
 
-  if (firecrawlAttempt.payload) {
-    const firecrawlResult = await buildResultFromFirecrawl({
-      url,
-      payload: firecrawlAttempt.payload,
-      maxCharacters,
-      cacheMode,
-      firecrawlDiagnostics: firecrawlAttempt.diagnostics,
-      deps,
-    })
-    if (firecrawlResult) {
-      return firecrawlResult
-    }
+  try {
+    html = await fetchHtmlDocument(deps.fetch, url, { timeoutMs })
+  } catch (error) {
+    htmlError = error
+  }
+
+  const shouldTryFirecrawl =
+    deps.scrapeWithFirecrawl !== null &&
+    !isYouTubeUrl(url) &&
+    (html === null || shouldFallbackToFirecrawl(html))
+
+  if (shouldTryFirecrawl) {
+    const firecrawlAttempt = await fetchWithFirecrawl(url, deps.scrapeWithFirecrawl, { timeoutMs })
     firecrawlAttempt.diagnostics.notes = appendNote(
       firecrawlAttempt.diagnostics.notes,
-      'Firecrawl returned empty content'
+      html === null
+        ? 'HTML fetch failed; falling back to Firecrawl'
+        : 'HTML content looked blocked/thin; falling back to Firecrawl'
+    )
+
+    if (firecrawlAttempt.payload) {
+      const firecrawlResult = await buildResultFromFirecrawl({
+        url,
+        payload: firecrawlAttempt.payload,
+        maxCharacters,
+        youtubeTranscriptMode,
+        firecrawlDiagnostics: firecrawlAttempt.diagnostics,
+        deps,
+      })
+      if (firecrawlResult) {
+        return firecrawlResult
+      }
+      firecrawlAttempt.diagnostics.notes = appendNote(
+        firecrawlAttempt.diagnostics.notes,
+        'Firecrawl returned empty content'
+      )
+    }
+
+    if (html) {
+      return buildResultFromHtmlDocument({
+        url,
+        html,
+        maxCharacters,
+        youtubeTranscriptMode,
+        firecrawlDiagnostics: firecrawlAttempt.diagnostics,
+        deps,
+      })
+    }
+
+    const notes = firecrawlAttempt.diagnostics.notes
+    const firecrawlError = notes ? `; Firecrawl notes: ${notes}` : ''
+    throw new Error(
+      `Failed to fetch HTML document${firecrawlError}${
+        htmlError instanceof Error ? `; HTML error: ${htmlError.message}` : ''
+      }`
     )
   }
 
-  if (firecrawlAttempt.diagnostics.cacheStatus === 'unknown') {
-    firecrawlAttempt.diagnostics.cacheStatus = cacheMode === 'bypass' ? 'bypassed' : 'miss'
+  if (!html) {
+    throw htmlError instanceof Error ? htmlError : new Error('Failed to fetch HTML document')
   }
 
-  const html = await fetchHtmlDocument(deps.fetch, url)
+  const firecrawlDiagnostics: FirecrawlDiagnostics = { attempted: false, used: false, notes: null }
   return buildResultFromHtmlDocument({
     url,
     html,
     maxCharacters,
-    cacheMode,
-    firecrawlDiagnostics: firecrawlAttempt.diagnostics,
+    youtubeTranscriptMode,
+    firecrawlDiagnostics,
     deps,
   })
 }
@@ -88,14 +142,14 @@ async function buildResultFromFirecrawl({
   url,
   payload,
   maxCharacters,
-  cacheMode,
+  youtubeTranscriptMode,
   firecrawlDiagnostics,
   deps,
 }: {
   url: string
   payload: FirecrawlScrapeResult
   maxCharacters: number
-  cacheMode: CacheMode
+  youtubeTranscriptMode: FetchLinkContentOptions['youtubeTranscript']
   firecrawlDiagnostics: FirecrawlDiagnostics
   deps: LinkPreviewDeps
 }): Promise<ExtractedLinkContent | null> {
@@ -109,7 +163,7 @@ async function buildResultFromFirecrawl({
   }
 
   const transcriptResolution = await resolveTranscriptForLink(url, payload.html ?? null, deps, {
-    cacheMode,
+    youtubeTranscriptMode,
   })
   const baseContent = selectBaseContent(normalizedMarkdown, transcriptResolution.text)
   if (baseContent.length === 0) {
@@ -130,11 +184,8 @@ async function buildResultFromFirecrawl({
   const siteName = pickFirstText([metadata.siteName, htmlMetadata.siteName, safeHostname(url)])
 
   firecrawlDiagnostics.used = true
-  if (firecrawlDiagnostics.cacheStatus === 'unknown') {
-    firecrawlDiagnostics.cacheStatus = cacheMode === 'bypass' ? 'bypassed' : 'miss'
-  }
 
-  const transcriptDiagnostics = ensureTranscriptDiagnostics(transcriptResolution, cacheMode)
+  const transcriptDiagnostics = ensureTranscriptDiagnostics(transcriptResolution)
 
   return finalizeExtractedLinkContent({
     url,
@@ -156,21 +207,23 @@ async function buildResultFromHtmlDocument({
   url,
   html,
   maxCharacters,
-  cacheMode,
+  youtubeTranscriptMode,
   firecrawlDiagnostics,
   deps,
 }: {
   url: string
   html: string
   maxCharacters: number
-  cacheMode: CacheMode
+  youtubeTranscriptMode: FetchLinkContentOptions['youtubeTranscript']
   firecrawlDiagnostics: FirecrawlDiagnostics
   deps: LinkPreviewDeps
 }): Promise<ExtractedLinkContent> {
   const { title, description, siteName } = extractMetadataFromHtml(html, url)
   const rawContent = extractArticleContent(html)
   const normalized = normalizeForPrompt(rawContent)
-  const transcriptResolution = await resolveTranscriptForLink(url, html, deps, { cacheMode })
+  const transcriptResolution = await resolveTranscriptForLink(url, html, deps, {
+    youtubeTranscriptMode,
+  })
 
   const youtubeDescription =
     transcriptResolution.text === null ? extractYouTubeShortDescription(html) : null
@@ -181,7 +234,7 @@ async function buildResultFromHtmlDocument({
     baseContent = stripLeadingTitle(baseContent, title)
   }
 
-  const transcriptDiagnostics = ensureTranscriptDiagnostics(transcriptResolution, cacheMode)
+  const transcriptDiagnostics = ensureTranscriptDiagnostics(transcriptResolution)
 
   return finalizeExtractedLinkContent({
     url,

@@ -1,5 +1,3 @@
-import type { CacheMode as ContractCacheMode } from '../../shared/contracts.js'
-
 export type TranscriptSource =
   | 'youtubei'
   | 'captionTracks'
@@ -8,13 +6,7 @@ export type TranscriptSource =
   | 'unavailable'
   | 'unknown'
 
-export type CacheMode = ContractCacheMode
-
-export type CacheStatus = 'hit' | 'miss' | 'expired' | 'bypassed' | 'fallback' | 'unknown'
-
 export interface TranscriptDiagnostics {
-  cacheMode: CacheMode
-  cacheStatus: CacheStatus
   textProvided: boolean
   provider: TranscriptSource | null
   attemptedProviders: TranscriptSource[]
@@ -24,8 +16,6 @@ export interface TranscriptDiagnostics {
 export interface FirecrawlDiagnostics {
   attempted: boolean
   used: boolean
-  cacheMode: CacheMode
-  cacheStatus: CacheStatus
   notes?: string | null
 }
 
@@ -40,5 +30,3 @@ export interface TranscriptResolution {
   source: TranscriptSource | null
   diagnostics?: TranscriptDiagnostics
 }
-
-export { CACHE_MODES } from '../../shared/contracts.js'

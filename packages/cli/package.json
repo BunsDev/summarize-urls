@@ -14,7 +14,8 @@
     "build:esm": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@steipete/summarizer": "workspace:*"
+    "@steipete/summarizer": "workspace:*",
+    "commander": "^14.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.3.1",

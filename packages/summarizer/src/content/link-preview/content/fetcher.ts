@@ -1,6 +1,6 @@
 import type { FirecrawlScrapeResult, ScrapeWithFirecrawl } from '../deps.js'
 import { isYouTubeUrl } from '../transcript/utils.js'
-import type { CacheMode, FirecrawlDiagnostics } from '../types.js'
+import type { FirecrawlDiagnostics } from '../types.js'
 
 import { appendNote } from './utils.js'
 
@@ -14,18 +14,26 @@ const REQUEST_HEADERS: Record<string, string> = {
   Pragma: 'no-cache',
 }
 
-const REQUEST_TIMEOUT_MS = 5000
+const DEFAULT_REQUEST_TIMEOUT_MS = 5000
 
 export interface FirecrawlFetchResult {
   payload: FirecrawlScrapeResult | null
   diagnostics: FirecrawlDiagnostics
 }
 
-export async function fetchHtmlDocument(fetchImpl: typeof fetch, url: string): Promise<string> {
+export async function fetchHtmlDocument(
+  fetchImpl: typeof fetch,
+  url: string,
+  { timeoutMs }: { timeoutMs?: number } = {}
+): Promise<string> {
   const controller = new AbortController()
+  const effectiveTimeoutMs =
+    typeof timeoutMs === 'number' && Number.isFinite(timeoutMs)
+      ? timeoutMs
+      : DEFAULT_REQUEST_TIMEOUT_MS
   const timeout = setTimeout(() => {
     controller.abort()
-  }, REQUEST_TIMEOUT_MS)
+  }, effectiveTimeoutMs)
 
   try {
     const response = await fetchImpl(url, {
@@ -51,14 +59,12 @@ export async function fetchHtmlDocument(fetchImpl: typeof fetch, url: string): P
 
 export async function fetchWithFirecrawl(
   url: string,
-  cacheMode: CacheMode,
-  scrapeWithFirecrawl: ScrapeWithFirecrawl | null
+  scrapeWithFirecrawl: ScrapeWithFirecrawl | null,
+  { timeoutMs }: { timeoutMs?: number } = {}
 ): Promise<FirecrawlFetchResult> {
   const diagnostics: FirecrawlDiagnostics = {
     attempted: false,
     used: false,
-    cacheMode,
-    cacheStatus: cacheMode === 'bypass' ? 'bypassed' : 'unknown',
     notes: null,
   }
 
@@ -75,7 +81,7 @@ export async function fetchWithFirecrawl(
   diagnostics.attempted = true
 
   try {
-    const payload = await scrapeWithFirecrawl(url, { cacheMode })
+    const payload = await scrapeWithFirecrawl(url, { timeoutMs })
     if (!payload) {
       diagnostics.notes = appendNote(diagnostics.notes, 'Firecrawl returned no content payload')
       return { payload: null, diagnostics }

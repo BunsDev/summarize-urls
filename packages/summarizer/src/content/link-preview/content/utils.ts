@@ -1,8 +1,8 @@
-import type { CacheMode, TranscriptDiagnostics } from '../types.js'
+import type { TranscriptDiagnostics } from '../types.js'
 import { applyContentBudget, normalizeCandidate, normalizeForPrompt } from './cleaner.js'
 import {
-  DEFAULT_CACHE_MODE,
   DEFAULT_MAX_CONTENT_CHARACTERS,
+  DEFAULT_TIMEOUT_MS,
   type ExtractedLinkContent,
   type FetchLinkContentOptions,
   type FinalizationArguments,
@@ -12,10 +12,6 @@ import {
 const WWW_PREFIX_PATTERN = /^www\./i
 const TRANSCRIPT_LINE_SPLIT_PATTERN = /\r?\n/
 
-export function resolveCacheMode(options?: FetchLinkContentOptions): CacheMode {
-  return options?.cacheMode ?? DEFAULT_CACHE_MODE
-}
-
 export function resolveMaxCharacters(options?: FetchLinkContentOptions): number {
   const candidate = options?.maxCharacters
   if (typeof candidate !== 'number' || !Number.isFinite(candidate)) {
@@ -23,6 +19,14 @@ export function resolveMaxCharacters(options?: FetchLinkContentOptions): number 
   }
   if (candidate <= DEFAULT_MAX_CONTENT_CHARACTERS) {
     return DEFAULT_MAX_CONTENT_CHARACTERS
+  }
+  return Math.floor(candidate)
+}
+
+export function resolveTimeoutMs(options?: FetchLinkContentOptions): number {
+  const candidate = options?.timeoutMs
+  if (typeof candidate !== 'number' || !Number.isFinite(candidate) || candidate <= 0) {
+    return DEFAULT_TIMEOUT_MS
   }
   return Math.floor(candidate)
 }
@@ -80,22 +84,13 @@ export function summarizeTranscript(transcriptText: string | null) {
 }
 
 export function ensureTranscriptDiagnostics(
-  resolution: TranscriptResolution,
-  cacheMode: CacheMode
+  resolution: TranscriptResolution
 ): TranscriptDiagnostics {
   if (resolution.diagnostics) {
     return resolution.diagnostics
   }
   const hasText = typeof resolution.text === 'string' && resolution.text.length > 0
-  let cacheStatus: TranscriptDiagnostics['cacheStatus'] = 'unknown'
-  if (cacheMode === 'bypass') {
-    cacheStatus = 'bypassed'
-  } else if (hasText) {
-    cacheStatus = 'miss'
-  }
   return {
-    cacheMode,
-    cacheStatus,
     textProvided: hasText,
     provider: resolution.source,
     attemptedProviders: resolution.source ? [resolution.source] : [],

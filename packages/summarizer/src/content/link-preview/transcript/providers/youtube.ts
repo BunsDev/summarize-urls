@@ -23,6 +23,7 @@ export const fetchTranscript = async (
 ): Promise<ProviderResult> => {
   const attemptedProviders: TranscriptSource[] = []
   const { html, url } = context
+  const mode = options.youtubeTranscriptMode
 
   if (!html) {
     return { text: null, source: null, attemptedProviders }
@@ -37,46 +38,54 @@ export const fetchTranscript = async (
     return { text: null, source: null, attemptedProviders }
   }
 
-  const config = extractYoutubeiTranscriptConfig(html)
-  if (config) {
-    attemptedProviders.push('youtubei')
-    const transcript = await fetchTranscriptFromTranscriptEndpoint(options.fetch, {
-      config,
+  if (mode !== 'apify') {
+    const config = extractYoutubeiTranscriptConfig(html)
+    if (config) {
+      attemptedProviders.push('youtubei')
+      const transcript = await fetchTranscriptFromTranscriptEndpoint(options.fetch, {
+        config,
+        originalUrl: url,
+      })
+      if (transcript) {
+        return {
+          text: normalizeTranscriptText(transcript),
+          source: 'youtubei',
+          metadata: { provider: 'youtubei' },
+          attemptedProviders,
+        }
+      }
+    }
+
+    attemptedProviders.push('captionTracks')
+    const captionTranscript = await fetchTranscriptFromCaptionTracks(options.fetch, {
+      html,
       originalUrl: url,
+      videoId: effectiveVideoId,
     })
-    if (transcript) {
+    if (captionTranscript) {
       return {
-        text: normalizeTranscriptText(transcript),
-        source: 'youtubei',
-        metadata: { provider: 'youtubei' },
+        text: normalizeTranscriptText(captionTranscript),
+        source: 'captionTracks',
+        metadata: { provider: 'captionTracks' },
         attemptedProviders,
       }
     }
   }
 
-  attemptedProviders.push('captionTracks')
-  const captionTranscript = await fetchTranscriptFromCaptionTracks(options.fetch, {
-    html,
-    originalUrl: url,
-    videoId: effectiveVideoId,
-  })
-  if (captionTranscript) {
-    return {
-      text: normalizeTranscriptText(captionTranscript),
-      source: 'captionTracks',
-      metadata: { provider: 'captionTracks' },
-      attemptedProviders,
-    }
-  }
-
-  attemptedProviders.push('apify')
-  const apifyTranscript = await fetchTranscriptWithApify(options.fetch, options.apifyApiToken, url)
-  if (apifyTranscript) {
-    return {
-      text: normalizeTranscriptText(apifyTranscript),
-      source: 'apify',
-      metadata: { provider: 'apify' },
-      attemptedProviders,
+  if (mode !== 'web') {
+    attemptedProviders.push('apify')
+    const apifyTranscript = await fetchTranscriptWithApify(
+      options.fetch,
+      options.apifyApiToken,
+      url
+    )
+    if (apifyTranscript) {
+      return {
+        text: normalizeTranscriptText(apifyTranscript),
+        source: 'apify',
+        metadata: { provider: 'apify' },
+        attemptedProviders,
+      }
     }
   }
 

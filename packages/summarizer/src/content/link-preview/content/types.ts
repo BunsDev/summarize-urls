@@ -1,16 +1,13 @@
-import type {
-  CacheMode,
-  ContentFetchDiagnostics,
-  TranscriptDiagnostics,
-  TranscriptSource,
-} from '../types.js'
+import type { ContentFetchDiagnostics, TranscriptDiagnostics, TranscriptSource } from '../types.js'
 
 export const DEFAULT_MAX_CONTENT_CHARACTERS = 8000
-export const DEFAULT_CACHE_MODE: CacheMode = 'default'
+export const DEFAULT_TIMEOUT_MS = 5000
+export type YoutubeTranscriptMode = 'auto' | 'web' | 'apify'
 
 export interface FetchLinkContentOptions {
   maxCharacters?: number
-  cacheMode?: CacheMode
+  timeoutMs?: number
+  youtubeTranscript?: YoutubeTranscriptMode
 }
 
 export interface TranscriptResolution {

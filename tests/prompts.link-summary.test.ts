@@ -23,6 +23,22 @@ describe('buildLinkSummaryPrompt', () => {
     expect(prompt).not.toContain('Tweets from sharers:')
   })
 
+  it('adds a hard limit when summary length is specified in characters', () => {
+    const prompt = buildLinkSummaryPrompt({
+      url: 'https://example.com',
+      title: null,
+      siteName: null,
+      description: null,
+      content: 'Body',
+      truncated: false,
+      hasTranscript: false,
+      summaryLength: { maxCharacters: 20_000 },
+      shares: [],
+    })
+
+    expect(prompt).toContain('Hard limit: 20,000 characters total')
+  })
+
   it('renders sharer lines with metrics and timestamp', () => {
     const prompt = buildLinkSummaryPrompt({
       url: 'https://example.com',

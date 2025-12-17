@@ -1,6 +1,5 @@
 import type { LinkPreviewDeps } from '../deps.js'
-import type { CacheMode, TranscriptDiagnostics, TranscriptResolution } from '../types.js'
-import { mapCachedSource, readTranscriptCache, writeTranscriptCache } from './cache.js'
+import type { TranscriptDiagnostics, TranscriptResolution } from '../types.js'
 import {
   canHandle as canHandleGeneric,
   fetchTranscript as fetchGeneric,
@@ -22,7 +21,6 @@ import type {
   ProviderFetchOptions,
   ProviderModule,
   ProviderResult,
-  TranscriptService,
 } from './types.js'
 import {
   extractYouTubeVideoId as extractYouTubeVideoIdInternal,
@@ -30,7 +28,7 @@ import {
 } from './utils.js'
 
 interface ResolveTranscriptOptions {
-  cacheMode?: CacheMode
+  youtubeTranscriptMode?: ProviderFetchOptions['youtubeTranscriptMode']
 }
 
 const PROVIDERS: ProviderModule[] = [
@@ -45,70 +43,27 @@ export const resolveTranscriptForLink = async (
   url: string,
   html: string | null,
   deps: LinkPreviewDeps,
-  { cacheMode: providedCacheMode }: ResolveTranscriptOptions = {}
+  { youtubeTranscriptMode }: ResolveTranscriptOptions = {}
 ): Promise<TranscriptResolution> => {
   const normalizedUrl = url.trim()
-  const cacheMode: CacheMode = providedCacheMode ?? 'default'
   const resourceKey = extractResourceKey(normalizedUrl)
   const baseContext: ProviderContext = { url: normalizedUrl, html, resourceKey }
   const provider: ProviderModule = selectProvider(baseContext)
-  const service: TranscriptService = provider.id
-
-  const cacheOutcome = await readTranscriptCache({
-    url: normalizedUrl,
-    cacheMode,
-    transcriptCache: deps.transcriptCache,
-  })
   const diagnostics: TranscriptDiagnostics = {
-    cacheMode,
-    cacheStatus: cacheOutcome.result.diagnostics.cacheStatus,
-    textProvided: cacheOutcome.result.diagnostics.textProvided,
-    provider: cacheOutcome.result.diagnostics.provider,
     attemptedProviders: [],
-    notes: cacheOutcome.result.diagnostics.notes ?? null,
-  }
-
-  if (cacheOutcome.result.resolution) {
-    return {
-      ...cacheOutcome.result.resolution,
-      diagnostics,
-    }
+    notes: null,
+    provider: null,
+    textProvided: false,
   }
 
   const providerResult = await executeProvider(provider, baseContext, {
     fetch: deps.fetch,
     apifyApiToken: deps.apifyApiToken,
+    youtubeTranscriptMode: youtubeTranscriptMode ?? 'auto',
   })
   diagnostics.provider = providerResult.source
   diagnostics.attemptedProviders = providerResult.attemptedProviders
   diagnostics.textProvided = Boolean(providerResult.text && providerResult.text.length > 0)
-
-  if (providerResult.source !== null || providerResult.text !== null) {
-    await writeTranscriptCache({
-      url: normalizedUrl,
-      service,
-      resourceKey,
-      result: providerResult,
-      transcriptCache: deps.transcriptCache,
-    })
-  }
-
-  if (!providerResult.text && cacheOutcome.cached?.content && cacheMode !== 'bypass') {
-    diagnostics.cacheStatus = cacheOutcome.cached.expired ? 'fallback' : 'hit'
-    diagnostics.provider = mapCachedSource(cacheOutcome.cached.source)
-    diagnostics.textProvided = Boolean(
-      cacheOutcome.cached.content && cacheOutcome.cached.content.length > 0
-    )
-    diagnostics.notes = appendNote(
-      diagnostics.notes,
-      'Falling back to cached transcript content after provider miss'
-    )
-    return {
-      text: cacheOutcome.cached.content,
-      source: diagnostics.provider,
-      diagnostics,
-    }
-  }
 
   return {
     text: providerResult.text,
@@ -146,10 +101,3 @@ const executeProvider = async (
   context: ProviderContext,
   options: ProviderFetchOptions
 ): Promise<ProviderResult> => provider.fetchTranscript(context, options)
-
-const appendNote = (existing: string | null | undefined, next: string): string => {
-  if (!existing) {
-    return next
-  }
-  return `${existing}; ${next}`
-}

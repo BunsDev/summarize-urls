@@ -12,10 +12,13 @@ This repo is a **pnpm workspace** with two publishable packages:
 - **URL → clean text**: fetches HTML, extracts the main article-ish content, normalizes it for prompts.
 - **YouTube transcripts** (when the URL is a YouTube link):
   - `youtubei` transcript endpoint (best-effort)
-  - caption track parsing (fallback)
+  - `captionTracks` (best-effort)
   - Apify transcript actor (optional fallback, requires `APIFY_API_TOKEN`)
+  - If transcripts are blocked, we still extract `ytInitialPlayerResponse.videoDetails.shortDescription` so YouTube links summarize meaningfully.
+- **Firecrawl fallback for blocked sites**: if direct HTML fetching is blocked or yields too little content, we retry via Firecrawl to get Markdown (requires `FIRECRAWL_API_KEY`).
 - **Prompt-only mode**: print the generated prompt and use any model/provider you want.
 - **OpenAI mode**: if `OPENAI_API_KEY` is set, calls the Chat Completions API and prints the model output.
+- **Structured output**: `--json` emits a single JSON object with extraction diagnostics + the prompt + (optional) summary.
 
 ## CLI usage
 
@@ -44,11 +47,31 @@ Print the prompt only:
 node packages/cli/dist/esm/cli.js "https://example.com" --prompt
 ```
 
-Change length and model:
+Change model, length, YouTube mode, and timeout:
 
 ```bash
-node packages/cli/dist/esm/cli.js "https://example.com" --length xl --model gpt-4o-mini
+node packages/cli/dist/esm/cli.js "https://example.com" --length 20k --timeout 30s --model gpt-5.2
+node packages/cli/dist/esm/cli.js "https://www.youtube.com/watch?v=I845O57ZSy4&t=11s" --youtube auto --length 8k
 ```
+
+Structured JSON output:
+
+```bash
+pnpm summarize -- "https://example.com" --json
+```
+
+### Flags
+
+- `--youtube auto|web|apify`
+  - `auto` (default): try YouTube web endpoints first (`youtubei` / `captionTracks`), then fall back to Apify
+  - `web`: only try YouTube web endpoints (no Apify)
+  - `apify`: only try Apify (no web endpoints)
+- `--length short|medium|long|xl|xxl|<chars>`
+  - Presets influence formatting; `<chars>` (e.g. `20k`, `1500`) adds a hard character limit instruction and clamps output to the budget.
+- `--timeout <duration>`: `30` (seconds), `30s`, `2m`, `5000ms`
+- `--model <model>`: default `gpt-5.2` (or `OPENAI_MODEL`)
+- `--prompt`: print prompt and exit (never calls OpenAI)
+- `--json`: emit a single JSON object instead of plain text
 
 ## Required services & API keys
 
@@ -65,15 +88,21 @@ Used only as a fallback when YouTube transcript endpoints fail and only if the t
 
 - `APIFY_API_TOKEN` (optional)
 
+### Firecrawl (optional website fallback)
+
+Used only as a fallback for non-YouTube URLs when direct HTML fetching/extraction looks blocked or too thin.
+
+- `FIRECRAWL_API_KEY` (optional)
+
 ## Library API (for other Node programs)
 
 `@steipete/summarizer` exports two entry points:
 
 - `@steipete/summarizer/content`
-  - `createLinkPreviewClient({ fetch?, scrapeWithFirecrawl?, apifyApiToken?, transcriptCache? })`
-  - The cache is **pluggable** via `TranscriptCache` (`get/set`). In this repo the CLI currently runs without a persistent cache.
+  - `createLinkPreviewClient({ fetch?, scrapeWithFirecrawl?, apifyApiToken? })`
+  - `client.fetchLinkContent(url, { timeoutMs?, maxCharacters?, youtubeTranscript? })`
 - `@steipete/summarizer/prompts`
-  - `buildLinkSummaryPrompt(...)`
+  - `buildLinkSummaryPrompt(...)` (`summaryLength` supports presets or `{ maxCharacters }`)
   - `SUMMARY_LENGTH_TO_TOKENS`
 
 ## Dev

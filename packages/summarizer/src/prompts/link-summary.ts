@@ -40,6 +40,21 @@ export const SUMMARY_LENGTH_TO_TOKENS: Record<SummaryLength, number> = {
   xxl: 4096,
 }
 
+export type SummaryLengthTarget = SummaryLength | { maxCharacters: number }
+
+export function pickSummaryLengthForCharacters(maxCharacters: number): SummaryLength {
+  if (maxCharacters <= 1200) return 'short'
+  if (maxCharacters <= 2500) return 'medium'
+  if (maxCharacters <= 6000) return 'long'
+  if (maxCharacters <= 14000) return 'xl'
+  return 'xxl'
+}
+
+export function estimateMaxCompletionTokensForCharacters(maxCharacters: number): number {
+  const estimate = Math.ceil(maxCharacters / 4)
+  return Math.min(8192, Math.max(256, estimate))
+}
+
 const resolveSummaryDirective = (
   length: SummaryLength
 ): (typeof SUMMARY_LENGTH_DIRECTIVES)[SummaryLength] =>
@@ -77,7 +92,7 @@ export function buildLinkSummaryPrompt({
   content: string
   truncated: boolean
   hasTranscript: boolean
-  summaryLength: SummaryLength
+  summaryLength: SummaryLengthTarget
   shares: ShareContextEntry[]
 }): string {
   const contextLines: string[] = [`Source URL: ${url}`]
@@ -104,7 +119,15 @@ export function buildLinkSummaryPrompt({
     ? 'You summarize online videos for curious Twitter users who want to know whether the clip is worth watching.'
     : 'You summarize online articles for curious Twitter users who want the gist before deciding to dive in.'
 
-  const directive = resolveSummaryDirective(summaryLength)
+  const preset =
+    typeof summaryLength === 'string'
+      ? summaryLength
+      : pickSummaryLengthForCharacters(summaryLength.maxCharacters)
+  const directive = resolveSummaryDirective(preset)
+  const maxCharactersLine =
+    typeof summaryLength === 'string'
+      ? ''
+      : `Hard limit: ${formatCount(summaryLength.maxCharacters)} characters total (including Markdown and whitespace).`
 
   const shareLines = shares.map((share) => {
     const handle = share.handle && share.handle.length > 0 ? `@${share.handle}` : share.author
@@ -130,7 +153,7 @@ export function buildLinkSummaryPrompt({
 
   const sharesBlock = shares.length > 0 ? `Tweets from sharers:\n${shareLines.join('\n')}\n\n` : ''
 
-  return `${audienceLine} ${directive.guidance} ${directive.formatting} Keep the response compact by avoiding blank lines between sentences or list items; use only the single newlines required by the formatting instructions. Do not use emojis, disclaimers, or speculation. Write in direct, factual language. Format the answer in Markdown and obey the length-specific formatting above. Base everything strictly on the provided content and never invent details. ${shareGuidance}
+  return `${audienceLine} ${directive.guidance} ${directive.formatting} ${maxCharactersLine} Keep the response compact by avoiding blank lines between sentences or list items; use only the single newlines required by the formatting instructions. Do not use emojis, disclaimers, or speculation. Write in direct, factual language. Format the answer in Markdown and obey the length-specific formatting above. Base everything strictly on the provided content and never invent details. ${shareGuidance}
 
 ${contextHeader}
 
