@@ -656,6 +656,9 @@ export async function runCli(
         cost: costReport,
         summary: null,
       }
+      if (costReport) {
+        writeCostReport(costReport)
+      }
       stdout.write(`${JSON.stringify(payload, null, 2)}\n`)
       return
     }
@@ -700,6 +703,9 @@ export async function runCli(
         llm: null,
         cost: costReport,
         summary: null,
+      }
+      if (costReport) {
+        writeCostReport(costReport)
       }
       stdout.write(`${JSON.stringify(payload, null, 2)}\n`)
       return
@@ -897,6 +903,9 @@ export async function runCli(
       summary,
     }
 
+    if (costReport) {
+      writeCostReport(costReport)
+    }
     stdout.write(`${JSON.stringify(payload, null, 2)}\n`)
     return
   }
