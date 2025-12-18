@@ -364,6 +364,17 @@ function splitTextIntoChunks(input: string, maxCharacters: number): string[] {
   return chunks.filter((chunk) => chunk.length > 0)
 }
 
+function normalizeSummarizeModelId(raw: string): string {
+  const trimmed = raw.trim()
+  if (trimmed === 'grok-4-1-fast-non-reasoning') {
+    return 'xai/grok-4.1-fast-non-reasoning'
+  }
+  if (trimmed === 'xai/grok-4-1-fast-non-reasoning') {
+    return 'xai/grok-4.1-fast-non-reasoning'
+  }
+  return trimmed
+}
+
 const VERBOSE_PREFIX = '[summarize]'
 
 function writeVerbose(
@@ -487,7 +498,7 @@ export async function runCli(
     return 'gpt-5.2'
   })()
 
-  const model = (modelArg?.trim() ?? '') || resolvedDefaultModel
+  const model = normalizeSummarizeModelId((modelArg?.trim() ?? '') || resolvedDefaultModel)
 
   const verboseColor = supportsColor(stderr, env)
 
