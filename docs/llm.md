@@ -1,6 +1,6 @@
 # LLM / summarization mode
 
-By default `summarize` will call an LLM using **direct provider API keys**. Use `--prompt` if you just want the generated prompt without calling an LLM.
+By default `summarize` will call an LLM using **direct provider API keys**.
 
 ## Defaults
 
@@ -24,5 +24,4 @@ By default `summarize` will call an LLM using **direct provider API keys**. Use 
     - `google/gemini-2.0-flash`
 - `--length short|medium|long|xl|xxl|<chars>`
   - This is *soft guidance* to the model (no hard truncation).
-- `--prompt` (print prompt and exit)
 - `--json` (includes prompt + summary in one JSON object)

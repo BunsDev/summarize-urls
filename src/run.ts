@@ -47,7 +47,7 @@ type JsonOutput = {
   extracted: unknown
   prompt: string
   llm: {
-    provider: 'xai' | 'openai' | 'google' | 'prompt-only'
+    provider: 'xai' | 'openai' | 'google'
     model: string
     maxCompletionTokens: number
     strategy: 'single' | 'map-reduce'
@@ -104,7 +104,6 @@ function buildProgram() {
       'Raw website extraction (disables Firecrawl + LLM Markdown conversion). Shorthand for --firecrawl off --markdown off.',
       false
     )
-    .option('--prompt', 'Print the prompt and exit', false)
     .option('--extract-only', 'Print extracted content and exit', false)
     .option('--json', 'Output structured JSON', false)
     .option('--verbose', 'Print detailed progress info to stderr', false)
@@ -333,7 +332,6 @@ export async function runCli(
   const youtubeMode = parseYoutubeMode(program.opts().youtube as string)
   const lengthArg = parseLengthArg(program.opts().length as string)
   const timeoutMs = parseDurationMs(program.opts().timeout as string)
-  const printPrompt = Boolean(program.opts().prompt)
   const extractOnly = Boolean(program.opts().extractOnly)
   const json = Boolean(program.opts().json)
   const verbose = Boolean(program.opts().verbose)
@@ -349,10 +347,6 @@ export async function runCli(
   const markdownExplicitlySet = normalizedArgv.some(
     (arg) => arg === '--markdown' || arg.startsWith('--markdown=')
   )
-
-  if (printPrompt && extractOnly) {
-    throw new Error('--prompt and --extract-only are mutually exclusive')
-  }
 
   const modelArg =
     typeof program.opts().model === 'string' ? (program.opts().model as string) : null
@@ -504,7 +498,7 @@ export async function runCli(
     verbose,
     `config url=${url} timeoutMs=${timeoutMs} youtube=${youtubeMode} firecrawl=${firecrawlMode} length=${
       lengthArg.kind === 'preset' ? lengthArg.preset : `${lengthArg.maxCharacters} chars`
-    } json=${json} extractOnly=${extractOnly} prompt=${printPrompt} markdown=${effectiveMarkdownMode} model=${model} raw=${raw}`,
+    } json=${json} extractOnly=${extractOnly} markdown=${effectiveMarkdownMode} model=${model} raw=${raw}`,
     verboseColor
   )
   writeVerbose(
@@ -667,54 +661,6 @@ export async function runCli(
       writeCostReport(buildRunCostReport({ llmCalls, firecrawlRequests, apifyRequests, pricing }))
     }
     stdout.write(`${extracted.content}\n`)
-    return
-  }
-
-  if (printPrompt) {
-    writeVerbose(stderr, verbose, 'mode prompt-only', verboseColor)
-
-    if (json) {
-      const costReport =
-        cost || verbose
-          ? buildRunCostReport({ llmCalls, firecrawlRequests, apifyRequests, pricing })
-          : null
-      const payload: JsonOutput = {
-        input: {
-          url,
-          timeoutMs,
-          youtube: youtubeMode,
-          firecrawl: firecrawlMode,
-          markdown: effectiveMarkdownMode,
-          length:
-            lengthArg.kind === 'preset'
-              ? { kind: 'preset', preset: lengthArg.preset }
-              : { kind: 'chars', maxCharacters: lengthArg.maxCharacters },
-          model,
-        },
-        env: {
-          hasXaiKey: Boolean(xaiApiKey),
-          hasOpenAIKey: Boolean(apiKey),
-          hasApifyToken: Boolean(apifyToken),
-          hasFirecrawlKey: firecrawlConfigured,
-          hasGoogleKey: googleConfigured,
-        },
-        extracted,
-        prompt,
-        llm: null,
-        cost: costReport,
-        summary: null,
-      }
-      if (costReport) {
-        writeCostReport(costReport)
-      }
-      stdout.write(`${JSON.stringify(payload, null, 2)}\n`)
-      return
-    }
-
-    if (cost || verbose) {
-      writeCostReport(buildRunCostReport({ llmCalls, firecrawlRequests, apifyRequests, pricing }))
-    }
-    stdout.write(`${prompt}\n`)
     return
   }
 

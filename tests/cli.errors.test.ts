@@ -35,19 +35,6 @@ describe('cli error handling', () => {
     ).rejects.toThrow('Only HTTP and HTTPS URLs can be summarized')
   })
 
-  it('errors when --prompt and --extract-only are both set', async () => {
-    await expect(
-      runCli(['--prompt', '--extract-only', 'https://example.com'], {
-        env: {},
-        fetch: vi.fn(
-          async () => new Response('<html></html>', { status: 200 })
-        ) as unknown as typeof fetch,
-        stdout: noopStream(),
-        stderr: noopStream(),
-      })
-    ).rejects.toThrow('--prompt and --extract-only are mutually exclusive')
-  })
-
   it('errors when --firecrawl always is set without a key', async () => {
     await expect(
       runCli(['--firecrawl', 'always', '--extract-only', 'https://example.com'], {

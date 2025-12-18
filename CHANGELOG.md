@@ -20,5 +20,5 @@ All notable changes to this project are documented here.
 - `--extract-only --markdown auto|llm` can convert HTML → Markdown via an LLM using the configured `--model`.
 - CLI defaults: `--timeout 2m`.
 - `--help` includes examples and required env vars.
-- `--extract-only` (no LLM call), `--prompt` (prompt-only), `--json` (structured output), `--verbose`.
+- `--extract-only` (no LLM call), `--json` (structured output), `--verbose`.
 - Tests + coverage gate (>= 75%) via Vitest + v8 coverage; lint/format via Biome.

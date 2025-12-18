@@ -23,7 +23,6 @@ Docs (by mode):
   - If transcripts are blocked, we still extract `ytInitialPlayerResponse.videoDetails.shortDescription` so YouTube links summarize meaningfully.
 - **Firecrawl fallback for blocked sites**: if direct HTML fetching is blocked or yields too little content, we retry via Firecrawl to get Markdown (requires `FIRECRAWL_API_KEY`).
 - **LLM HTML→Markdown (optional)**: in `--extract-only` website mode, `--markdown auto|llm` can convert HTML → clean Markdown using the configured `--model` (no provider fallback).
-- **Prompt-only mode**: print the generated prompt (`--prompt`) and use any model/provider you want.
 - **Structured output**: `--json` emits a single JSON object with extraction diagnostics + the prompt + (optional) summary.
 - **Extract-only mode**: `--extract-only` prints the extracted content (no LLM call).
 
@@ -39,7 +38,6 @@ Run:
 
 ```bash
 summarize "https://example.com"
-summarize "https://example.com" --prompt
 ```
 
 One-off (no install):
@@ -58,19 +56,13 @@ pnpm build
 Run without building (direct TS via `tsx`):
 
 ```bash
-pnpm summarize -- "https://example.com" --prompt
+pnpm summarize -- "https://example.com"
 ```
 
 Summarize a URL:
 
 ```bash
 summarize "https://example.com"
-```
-
-Print the prompt only:
-
-```bash
-summarize "https://example.com" --prompt
 ```
 
 Change model, length, YouTube mode, and timeout:
@@ -113,7 +105,6 @@ summarize "https://example.com" --json
     - `xai/grok-4-fast-non-reasoning`
     - `openai/gpt-5.2`
     - `google/gemini-2.0-flash`
-- `--prompt`: print prompt and exit (never calls an LLM)
 - `--extract-only`: print extracted content and exit (never calls an LLM)
 - `--json`: emit a single JSON object instead of plain text
 - `--verbose`: print detailed progress + extraction diagnostics to stderr
