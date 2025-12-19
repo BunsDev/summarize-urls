@@ -27,8 +27,8 @@ vi.mock('@ai-sdk/openai', () => ({
   }),
 }))
 
-describe('cli json + cost report', () => {
-  it('prints cost lines to stderr when --json --metrics detailed', async () => {
+describe('cli json + metrics report', () => {
+  it('prints metrics lines to stderr when --json --metrics detailed', async () => {
     const root = mkdtempSync(join(tmpdir(), 'summarize-json-cost-'))
     const cacheDir = join(root, '.summarize', 'cache')
     mkdirSync(cacheDir, { recursive: true })
@@ -96,7 +96,11 @@ describe('cli json + cost report', () => {
     )
 
     expect(stdoutText).toContain('"summary"')
-    expect(stderrText).toContain('cost llm provider=')
-    expect(stderrText).toContain('cost total estimated=')
+    expect(stdoutText).toContain('"metrics"')
+    expect(stdoutText).not.toContain('estimatedUsd')
+    expect(stdoutText).not.toContain('totalEstimatedUsd')
+    expect(stderrText).toContain('metrics llm provider=')
+    expect(stderrText).toContain('metrics total tok(i/o/t)=')
+    expect(stderrText).not.toContain('cost total')
   })
 })

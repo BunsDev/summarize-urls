@@ -37,11 +37,9 @@ describe('HTML→Markdown converter', async () => {
     const args = generateTextWithModelIdMock.mock.calls[0]?.[0] as {
       system?: string
       prompt: string
-      temperature: number
       modelId: string
     }
     expect(args.modelId).toBe('openai/gpt-5.2')
-    expect(args.temperature).toBe(0)
     expect(args.system).toContain('You convert HTML')
     expect(args.prompt).toContain('URL: https://example.com')
     expect(args.prompt).toContain('<h1>Hello</h1>')

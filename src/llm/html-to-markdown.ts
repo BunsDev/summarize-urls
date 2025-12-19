@@ -73,7 +73,6 @@ export function createHtmlToMarkdownConverter({
       apiKeys: { xaiApiKey, googleApiKey, openaiApiKey, anthropicApiKey },
       system,
       prompt,
-      temperature: 0,
       timeoutMs,
       fetchImpl,
     })

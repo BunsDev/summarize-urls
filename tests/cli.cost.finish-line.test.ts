@@ -62,8 +62,8 @@ vi.mock('@ai-sdk/xai', () => ({
   createXai: createXaiMock,
 }))
 
-describe('cli finish line + cost formatting', () => {
-  it('streams text to stdout and prints cost line with cents only', async () => {
+describe('cli finish line + metrics', () => {
+  it('streams text to stdout and prints token metrics + cost', async () => {
     streamTextMock.mockReset().mockImplementation(() => {
       return {
         textStream: createTextStream(['Hello', ' world']),
@@ -79,7 +79,7 @@ describe('cli finish line + cost formatting', () => {
     const cacheDir = join(root, '.summarize', 'cache')
     mkdirSync(cacheDir, { recursive: true })
 
-    // LiteLLM cache: gpt-5.2 input=$1.75/1M, output=$14/1M
+    // LiteLLM cache: used for model limits (avoid network fetch in tests)
     writeFileSync(
       join(cacheDir, 'litellm-model_prices_and_context_window.json'),
       JSON.stringify({
@@ -138,23 +138,23 @@ describe('cli finish line + cost formatting', () => {
     expect(stdout.getText()).toBe('Hello world\n')
     const err = stderr.getText()
     expect(err).toContain('Finished in')
-    expect(err).toContain('cost=$0.33')
+    expect(err).toContain('cost=$0.3265')
+    expect(err).not.toContain('estimated=')
     expect(err).toContain('promptTokens=123456')
     expect(err).toContain('completionTokens=7890')
     expect(err).toContain('totalTokens=131346')
-    expect(err).toMatch(/cost=\$[0-9]+\.[0-9]{2}\b/)
+    expect(err).toContain('metrics llm provider=')
+    expect(err).toContain('metrics total tok(i/o/t)=')
     expect(err).toContain('tok(i/o/t)=')
     expect(err).not.toContain('firecrawl=')
     expect(err).not.toContain('apify=')
     expect(err).not.toContain('strategy=')
     expect(err).not.toContain('chunks=')
-    // ensure we never print >2 decimals
-    expect(err).not.toMatch(/\$[0-9]+\.[0-9]{3,}/)
 
     globalFetchSpy.mockRestore()
   })
 
-  it('prints <$0.01 instead of $0.00 for non-zero costs', async () => {
+  it('prints a finish line with cost when token counts are small', async () => {
     streamTextMock.mockReset().mockImplementation(() => {
       return {
         textStream: createTextStream(['Hi']),
@@ -229,8 +229,8 @@ describe('cli finish line + cost formatting', () => {
     )
 
     const err = stderr.getText()
-    expect(err).toContain('cost=<$0.01')
-    expect(err).not.toContain('cost=$0.00')
+    expect(err).toContain('cost=$0.0000')
+    expect(err).not.toContain('estimated=')
     expect(err).toContain('tok(i/o/t)=10/10/20')
     expect(err).not.toContain('firecrawl=')
     expect(err).not.toContain('apify=')

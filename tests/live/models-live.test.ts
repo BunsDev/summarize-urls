@@ -16,7 +16,11 @@ function shouldSoftSkipLiveError(message: string): boolean {
   const apiKeys = {
     xaiApiKey: process.env.XAI_API_KEY ?? null,
     openaiApiKey: process.env.OPENAI_API_KEY ?? null,
-    googleApiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? null,
+    googleApiKey:
+      process.env.GEMINI_API_KEY ??
+      process.env.GOOGLE_GENERATIVE_AI_API_KEY ??
+      process.env.GOOGLE_API_KEY ??
+      null,
     anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? null,
   }
 
@@ -34,7 +38,6 @@ function shouldSoftSkipLiveError(message: string): boolean {
           prompt: 'Say exactly: ok',
           maxOutputTokens: 32,
           timeoutMs,
-          temperature: 0,
           fetchImpl: globalThis.fetch.bind(globalThis),
         })
         expect(result.text.trim().length).toBeGreaterThan(0)
@@ -61,7 +64,6 @@ function shouldSoftSkipLiveError(message: string): boolean {
           prompt: 'Say exactly: ok',
           maxOutputTokens: 32,
           timeoutMs,
-          temperature: 0,
           fetchImpl: globalThis.fetch.bind(globalThis),
         })
         expect(result.text.trim().length).toBeGreaterThan(0)
@@ -88,7 +90,6 @@ function shouldSoftSkipLiveError(message: string): boolean {
           prompt: 'Say exactly: ok',
           maxOutputTokens: 32,
           timeoutMs,
-          temperature: 0,
           fetchImpl: globalThis.fetch.bind(globalThis),
         })
         expect(result.text.trim().length).toBeGreaterThan(0)
@@ -105,7 +106,7 @@ function shouldSoftSkipLiveError(message: string): boolean {
     'Google (Gemini 3 Flash) returns text',
     async () => {
       if (!apiKeys.googleApiKey) {
-        it.skip('requires GOOGLE_GENERATIVE_AI_API_KEY', () => {})
+        it.skip('requires GEMINI_API_KEY', () => {})
         return
       }
       try {
@@ -115,7 +116,6 @@ function shouldSoftSkipLiveError(message: string): boolean {
           prompt: 'Say exactly: ok',
           maxOutputTokens: 32,
           timeoutMs,
-          temperature: 0,
           fetchImpl: globalThis.fetch.bind(globalThis),
         })
         expect(result.text.trim().length).toBeGreaterThan(0)

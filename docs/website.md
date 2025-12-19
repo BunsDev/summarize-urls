@@ -19,7 +19,7 @@ Use this for non-YouTube URLs.
 - `--extract-only` (print extracted content; no summary LLM call)
 - `--json` (emit a single JSON object)
 - `--verbose` (progress + which extractor was used)
-- `--metrics off|on|detailed` (default: `on`; `detailed` prints token usage + estimated costs)
+- `--metrics off|on|detailed` (default: `on`; `detailed` prints a breakdown to stderr)
 
 ## API keys
 

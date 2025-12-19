@@ -9,12 +9,7 @@ export type LlmCall = {
   purpose: 'summary' | 'chunk-notes' | 'markdown'
 }
 
-export type LlmPerTokenPricing = {
-  inputUsdPerToken: number
-  outputUsdPerToken: number
-}
-
-export type RunCostReport = {
+export type RunMetricsReport = {
   llm: Array<{
     provider: LlmProvider
     model: string
@@ -22,13 +17,11 @@ export type RunCostReport = {
     promptTokens: number | null
     completionTokens: number | null
     totalTokens: number | null
-    estimatedUsd: number | null
   }>
   services: {
-    firecrawl: { requests: number; estimatedUsd: number | null }
-    apify: { requests: number; estimatedUsd: number | null }
+    firecrawl: { requests: number }
+    apify: { requests: number }
   }
-  totalEstimatedUsd: number | null
 }
 
 function sumOrNull(values: Array<number | null>): number | null {
@@ -43,31 +36,15 @@ function sumOrNull(values: Array<number | null>): number | null {
   return any ? sum : null
 }
 
-function estimateLlmUsd({
-  pricing,
-  usage,
-}: {
-  pricing: LlmPerTokenPricing | null
-  usage: { promptTokens: number | null; completionTokens: number | null }
-}): number | null {
-  if (!pricing) return null
-  if (usage.promptTokens === null || usage.completionTokens === null) return null
-  const inputUsd = usage.promptTokens * pricing.inputUsdPerToken
-  const outputUsd = usage.completionTokens * pricing.outputUsdPerToken
-  return inputUsd + outputUsd
-}
-
-export function buildRunCostReport({
+export function buildRunMetricsReport({
   llmCalls,
   firecrawlRequests,
   apifyRequests,
-  resolveLlmPricing,
 }: {
   llmCalls: LlmCall[]
   firecrawlRequests: number
   apifyRequests: number
-  resolveLlmPricing: (modelId: string) => LlmPerTokenPricing | null
-}): RunCostReport {
+}): RunMetricsReport {
   const llmMap = new Map<
     string,
     {
@@ -107,10 +84,6 @@ export function buildRunCostReport({
     const promptTokens = sumOrNull(row.promptTokens)
     const completionTokens = sumOrNull(row.completionTokens)
     const totalTokens = sumOrNull(row.totalTokens)
-    const estimatedUsd = estimateLlmUsd({
-      pricing: resolveLlmPricing(row.model),
-      usage: { promptTokens, completionTokens },
-    })
     return {
       provider: row.provider,
       model: row.model,
@@ -118,29 +91,14 @@ export function buildRunCostReport({
       promptTokens,
       completionTokens,
       totalTokens,
-      estimatedUsd,
     }
   })
-
-  const firecrawlEstimatedUsd = null
-  const apifyEstimatedUsd = null
-
-  const totalEstimatedUsd = (() => {
-    const pieces: Array<number | null> = [
-      sumOrNull(llm.map((row) => row.estimatedUsd)),
-      firecrawlEstimatedUsd,
-      apifyEstimatedUsd,
-    ]
-    const total = sumOrNull(pieces)
-    return total
-  })()
 
   return {
     llm,
     services: {
-      firecrawl: { requests: firecrawlRequests, estimatedUsd: firecrawlEstimatedUsd },
-      apify: { requests: apifyRequests, estimatedUsd: apifyEstimatedUsd },
+      firecrawl: { requests: firecrawlRequests },
+      apify: { requests: apifyRequests },
     },
-    totalEstimatedUsd,
   }
 }

@@ -46,18 +46,18 @@ export async function generateTextWithModelId({
   apiKeys,
   system,
   prompt,
+  temperature,
   maxOutputTokens,
   timeoutMs,
-  temperature,
   fetchImpl,
 }: {
   modelId: string
   apiKeys: LlmApiKeys
   system?: string
   prompt: string | ModelMessage[]
+  temperature?: number
   maxOutputTokens?: number
   timeoutMs: number
-  temperature: number
   fetchImpl: typeof fetch
 }): Promise<{
   text: string
@@ -82,7 +82,7 @@ export async function generateTextWithModelId({
         model: xai(parsed.model),
         system,
         ...(typeof prompt === 'string' ? { prompt } : { messages: prompt }),
-        temperature,
+        ...(typeof temperature === 'number' ? { temperature } : {}),
         ...(typeof maxOutputTokens === 'number' ? { maxOutputTokens } : {}),
         abortSignal: controller.signal,
       })
@@ -98,7 +98,7 @@ export async function generateTextWithModelId({
       const apiKey = apiKeys.googleApiKey
       if (!apiKey)
         throw new Error(
-          'Missing GOOGLE_GENERATIVE_AI_API_KEY (or GEMINI_API_KEY / GOOGLE_API_KEY) for google/... model'
+          'Missing GEMINI_API_KEY (or GOOGLE_GENERATIVE_AI_API_KEY / GOOGLE_API_KEY) for google/... model'
         )
       const { createGoogleGenerativeAI } = await import('@ai-sdk/google')
       const google = createGoogleGenerativeAI({ apiKey, fetch: fetchImpl })
@@ -106,7 +106,7 @@ export async function generateTextWithModelId({
         model: google(parsed.model),
         system,
         ...(typeof prompt === 'string' ? { prompt } : { messages: prompt }),
-        temperature,
+        ...(typeof temperature === 'number' ? { temperature } : {}),
         ...(typeof maxOutputTokens === 'number' ? { maxOutputTokens } : {}),
         abortSignal: controller.signal,
       })
@@ -127,7 +127,7 @@ export async function generateTextWithModelId({
         model: anthropic(parsed.model),
         system,
         ...(typeof prompt === 'string' ? { prompt } : { messages: prompt }),
-        temperature,
+        ...(typeof temperature === 'number' ? { temperature } : {}),
         ...(typeof maxOutputTokens === 'number' ? { maxOutputTokens } : {}),
         abortSignal: controller.signal,
       })
@@ -143,11 +143,16 @@ export async function generateTextWithModelId({
     if (!apiKey) throw new Error('Missing OPENAI_API_KEY for openai/... model')
     const { createOpenAI } = await import('@ai-sdk/openai')
     const openai = createOpenAI({ apiKey, fetch: fetchImpl })
+    const baseUrl = typeof process !== 'undefined' ? process.env.OPENAI_BASE_URL : undefined
+    const useChatCompletions =
+      typeof baseUrl === 'string' && /openrouter\.ai/i.test(baseUrl) && baseUrl.length > 0
+    const responsesModelId = parsed.model as unknown as Parameters<typeof openai>[0]
+    const chatModelId = parsed.model as unknown as Parameters<typeof openai.chat>[0]
     const result = await generateText({
-      model: openai(parsed.model),
+      model: useChatCompletions ? openai.chat(chatModelId) : openai(responsesModelId),
       system,
       ...(typeof prompt === 'string' ? { prompt } : { messages: prompt }),
-      temperature,
+      ...(typeof temperature === 'number' ? { temperature } : {}),
       ...(typeof maxOutputTokens === 'number' ? { maxOutputTokens } : {}),
       abortSignal: controller.signal,
     })
@@ -172,18 +177,18 @@ export async function streamTextWithModelId({
   apiKeys,
   system,
   prompt,
+  temperature,
   maxOutputTokens,
   timeoutMs,
-  temperature,
   fetchImpl,
 }: {
   modelId: string
   apiKeys: LlmApiKeys
   system?: string
   prompt: string | ModelMessage[]
+  temperature?: number
   maxOutputTokens?: number
   timeoutMs: number
-  temperature: number
   fetchImpl: typeof fetch
 }): Promise<{
   textStream: AsyncIterable<string>
@@ -213,7 +218,7 @@ export async function streamTextWithModelId({
         model: xai(parsed.model),
         system,
         ...(typeof prompt === 'string' ? { prompt } : { messages: prompt }),
-        temperature,
+        ...(typeof temperature === 'number' ? { temperature } : {}),
         ...(typeof maxOutputTokens === 'number' ? { maxOutputTokens } : {}),
         abortSignal: controller.signal,
         onError,
@@ -231,7 +236,7 @@ export async function streamTextWithModelId({
       const apiKey = apiKeys.googleApiKey
       if (!apiKey)
         throw new Error(
-          'Missing GOOGLE_GENERATIVE_AI_API_KEY (or GEMINI_API_KEY / GOOGLE_API_KEY) for google/... model'
+          'Missing GEMINI_API_KEY (or GOOGLE_GENERATIVE_AI_API_KEY / GOOGLE_API_KEY) for google/... model'
         )
       const { createGoogleGenerativeAI } = await import('@ai-sdk/google')
       const google = createGoogleGenerativeAI({ apiKey, fetch: fetchImpl })
@@ -239,7 +244,7 @@ export async function streamTextWithModelId({
         model: google(parsed.model),
         system,
         ...(typeof prompt === 'string' ? { prompt } : { messages: prompt }),
-        temperature,
+        ...(typeof temperature === 'number' ? { temperature } : {}),
         ...(typeof maxOutputTokens === 'number' ? { maxOutputTokens } : {}),
         abortSignal: controller.signal,
         onError,
@@ -262,7 +267,7 @@ export async function streamTextWithModelId({
         model: anthropic(parsed.model),
         system,
         ...(typeof prompt === 'string' ? { prompt } : { messages: prompt }),
-        temperature,
+        ...(typeof temperature === 'number' ? { temperature } : {}),
         ...(typeof maxOutputTokens === 'number' ? { maxOutputTokens } : {}),
         abortSignal: controller.signal,
         onError,
@@ -280,11 +285,16 @@ export async function streamTextWithModelId({
     if (!apiKey) throw new Error('Missing OPENAI_API_KEY for openai/... model')
     const { createOpenAI } = await import('@ai-sdk/openai')
     const openai = createOpenAI({ apiKey, fetch: fetchImpl })
+    const baseUrl = typeof process !== 'undefined' ? process.env.OPENAI_BASE_URL : undefined
+    const useChatCompletions =
+      typeof baseUrl === 'string' && /openrouter\.ai/i.test(baseUrl) && baseUrl.length > 0
+    const responsesModelId = parsed.model as unknown as Parameters<typeof openai>[0]
+    const chatModelId = parsed.model as unknown as Parameters<typeof openai.chat>[0]
     const result = streamText({
-      model: openai(parsed.model),
+      model: useChatCompletions ? openai.chat(chatModelId) : openai(responsesModelId),
       system,
       ...(typeof prompt === 'string' ? { prompt } : { messages: prompt }),
-      temperature,
+      ...(typeof temperature === 'number' ? { temperature } : {}),
       ...(typeof maxOutputTokens === 'number' ? { maxOutputTokens } : {}),
       abortSignal: controller.signal,
       onError,
