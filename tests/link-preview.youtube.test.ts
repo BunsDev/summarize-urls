@@ -178,4 +178,21 @@ describe('link preview extraction (YouTube)', () => {
     expect(result.content).toBe('Line one\nLine two')
     expect(result.transcriptSource).toBe('unavailable')
   })
+
+  it('errors on invalid YouTube video ids', async () => {
+    const html = '<!doctype html><html><head><title>Home</title></head><body>Home</body></html>'
+    const fetchMock = vi.fn<[RequestInfo | URL, RequestInit?], Promise<Response>>((input) => {
+      const url = typeof input === 'string' ? input : (input?.url ?? '')
+      if (url.includes('youtube.com/watch') || url.includes('youtu.be/')) {
+        return Promise.resolve(htmlResponse(html))
+      }
+      return Promise.reject(new Error(`Unexpected fetch call: ${String(url)}`))
+    })
+
+    const client = createLinkPreviewClient({ fetch: fetchMock as unknown as typeof fetch })
+
+    await expect(
+      client.fetchLinkContent('https://www.youtube.com/watch?v=invalid_video_id')
+    ).rejects.toThrow(/Invalid YouTube video id/i)
+  })
 })

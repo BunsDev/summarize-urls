@@ -21,6 +21,7 @@ import {
   selectBaseContent,
 } from './utils.js'
 import { extractYouTubeShortDescription } from './youtube.js'
+import { extractYouTubeVideoId, isYouTubeVideoUrl } from '../transcript/utils.js'
 
 const LEADING_CONTROL_PATTERN = /^[\\s\\p{Cc}]+/u
 const BLOCKED_HTML_HINT_PATTERN =
@@ -296,6 +297,10 @@ async function buildResultFromHtmlDocument({
   timeoutMs: number
   deps: LinkPreviewDeps
 }): Promise<ExtractedLinkContent> {
+  if (isYouTubeVideoUrl(url) && !extractYouTubeVideoId(url)) {
+    throw new Error('Invalid YouTube video id in URL')
+  }
+
   const { title, description, siteName } = extractMetadataFromHtml(html, url)
   const rawContent = extractArticleContent(html)
   const normalized = normalizeForPrompt(rawContent)

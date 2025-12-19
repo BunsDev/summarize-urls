@@ -14,20 +14,54 @@ export const isYouTubeUrl = (rawUrl: string): boolean => {
   }
 }
 
+const YOUTUBE_VIDEO_ID_PATTERN = /^[a-zA-Z0-9_-]{11}$/
+
+export function isYouTubeVideoUrl(rawUrl: string): boolean {
+  try {
+    const url = new URL(rawUrl)
+    const hostname = url.hostname.toLowerCase()
+    if (hostname === 'youtu.be') {
+      return true
+    }
+    if (hostname.includes('youtube.com')) {
+      return (
+        url.pathname.startsWith('/watch') ||
+        url.pathname.startsWith('/shorts/') ||
+        url.pathname.startsWith('/embed/') ||
+        url.pathname.startsWith('/v/')
+      )
+    }
+  } catch {
+    return false
+  }
+  return false
+}
+
 export function extractYouTubeVideoId(rawUrl: string): string | null {
   try {
     const url = new URL(rawUrl)
-    if (url.hostname === 'youtu.be') {
-      return url.pathname.slice(1) || null
+    const hostname = url.hostname.toLowerCase()
+    let candidate: string | null = null
+    if (hostname === 'youtu.be') {
+      candidate = url.pathname.split('/')[1] ?? null
     }
-    if (url.hostname.includes('youtube.com')) {
+    if (hostname.includes('youtube.com')) {
       if (url.pathname.startsWith('/watch')) {
-        return url.searchParams.get('v')
-      }
-      if (url.pathname.startsWith('/shorts/')) {
-        return url.pathname.split('/')[2] ?? null
+        candidate = url.searchParams.get('v')
+      } else if (url.pathname.startsWith('/shorts/')) {
+        candidate = url.pathname.split('/')[2] ?? null
+      } else if (url.pathname.startsWith('/embed/')) {
+        candidate = url.pathname.split('/')[2] ?? null
+      } else if (url.pathname.startsWith('/v/')) {
+        candidate = url.pathname.split('/')[2] ?? null
       }
     }
+
+    const trimmed = candidate?.trim() ?? ''
+    if (!trimmed) {
+      return null
+    }
+    return YOUTUBE_VIDEO_ID_PATTERN.test(trimmed) ? trimmed : null
   } catch {
     // Ignore parsing errors for malformed URLs
   }
