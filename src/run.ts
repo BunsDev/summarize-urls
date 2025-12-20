@@ -58,6 +58,8 @@ type RunEnv = {
 }
 
 const BIRD_TIP = 'Tip: Install bird🐦 for better Twitter support: https://github.com/steipete/bird'
+const UVX_TIP =
+  'Tip: Install uv (uvx) for local Markdown conversion: brew install uv (or set UVX_PATH to your uvx binary).'
 const TWITTER_HOSTS = new Set(['x.com', 'twitter.com', 'mobile.twitter.com'])
 const SUMMARY_LENGTH_MAX_CHARACTERS: Record<SummaryLength, number> = {
   short: 1200,
@@ -178,6 +180,15 @@ function withBirdTip(
   }
   const message = error instanceof Error ? error.message : String(error)
   const combined = `${message}\n${BIRD_TIP}`
+  return error instanceof Error ? new Error(combined, { cause: error }) : new Error(combined)
+}
+
+function withUvxTip(error: unknown, env: Record<string, string | undefined>): Error {
+  if (hasUvxCli(env)) {
+    return error instanceof Error ? error : new Error(String(error))
+  }
+  const message = error instanceof Error ? error.message : String(error)
+  const combined = `${message}\n${UVX_TIP}`
   return error instanceof Error ? new Error(combined, { cause: error }) : new Error(combined)
 }
 
@@ -1216,6 +1227,15 @@ export async function runCli(
         })
       } catch (error) {
         if (!canPreprocessWithMarkitdown) {
+          if (
+            format === 'markdown' &&
+            preprocessMode !== 'off' &&
+            attachment.part.type === 'file' &&
+            shouldMarkitdownConvertMediaType(attachment.mediaType) &&
+            !hasUvxCli(env)
+          ) {
+            throw withUvxTip(error, env)
+          }
           throw error
         }
         try {
@@ -2113,6 +2133,17 @@ export async function runCli(
       } notes=${formatOptionalString(extracted.diagnostics.transcript.notes ?? null)}`,
       verboseColor
     )
+
+    if (
+      extractMode &&
+      markdownRequested &&
+      preprocessMode !== 'off' &&
+      effectiveMarkdownMode === 'auto' &&
+      !extracted.diagnostics.markdown.used &&
+      !hasUvxCli(env)
+    ) {
+      stderr.write(`${UVX_TIP}\n`)
+    }
 
     const isYouTube = extracted.siteName === 'YouTube'
     const prompt = buildLinkSummaryPrompt({
