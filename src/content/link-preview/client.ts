@@ -2,6 +2,7 @@ import { fetchLinkContent } from './content/index.js'
 import type { ExtractedLinkContent, FetchLinkContentOptions } from './content/types.js'
 import type {
   ConvertHtmlToMarkdown,
+  LinkPreviewDeps,
   LinkPreviewProgressEvent,
   ScrapeWithFirecrawl,
   TranscriptCache,
@@ -17,6 +18,7 @@ export interface LinkPreviewClientOptions {
   apifyApiToken?: string | null
   convertHtmlToMarkdown?: ConvertHtmlToMarkdown | null
   transcriptCache?: TranscriptCache | null
+  readTweetWithBird?: LinkPreviewDeps['readTweetWithBird']
   onProgress?: ((event: LinkPreviewProgressEvent) => void) | null
 }
 
@@ -27,6 +29,8 @@ export function createLinkPreviewClient(options: LinkPreviewClientOptions = {}):
   const apifyApiToken = typeof options.apifyApiToken === 'string' ? options.apifyApiToken : null
   const convertHtmlToMarkdown: ConvertHtmlToMarkdown | null = options.convertHtmlToMarkdown ?? null
   const transcriptCache: TranscriptCache | null = options.transcriptCache ?? null
+  const readTweetWithBird =
+    typeof options.readTweetWithBird === 'function' ? options.readTweetWithBird : null
   const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null
 
   return {
@@ -37,6 +41,7 @@ export function createLinkPreviewClient(options: LinkPreviewClientOptions = {}):
         apifyApiToken,
         convertHtmlToMarkdown,
         transcriptCache,
+        readTweetWithBird,
         onProgress,
       }),
   }

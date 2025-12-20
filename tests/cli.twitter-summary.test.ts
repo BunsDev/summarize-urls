@@ -41,7 +41,7 @@ describe('cli tweet summarization bypass', () => {
     })
 
     await runCli([tweetUrl], {
-      env: {},
+      env: { PATH: '' },
       fetch: fetchMock as unknown as typeof fetch,
       stdout,
       stderr: noopStream(),
@@ -57,7 +57,7 @@ describe('cli tweet summarization bypass', () => {
 
     await expect(
       runCli(['--length', '200', tweetUrl], {
-        env: {},
+        env: { PATH: '' },
         fetch: fetchMock as unknown as typeof fetch,
         stdout: noopStream(),
         stderr: noopStream(),

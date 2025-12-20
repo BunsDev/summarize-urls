@@ -1,3 +1,4 @@
+import { execFile } from 'node:child_process'
 import { accessSync, constants as fsConstants } from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -98,6 +99,56 @@ function hasBirdCli(env: Record<string, string | undefined>): boolean {
     candidates.push(path.join(entry, 'bird'))
   }
   return candidates.some((candidate) => isExecutable(candidate))
+}
+
+type BirdTweetPayload = {
+  id?: string
+  text: string
+  author?: { username?: string; name?: string }
+  createdAt?: string
+}
+
+async function readTweetWithBird(args: {
+  url: string
+  timeoutMs: number
+  env: Record<string, string | undefined>
+}): Promise<BirdTweetPayload> {
+  return await new Promise((resolve, reject) => {
+    execFile(
+      'bird',
+      ['read', args.url, '--json'],
+      {
+        timeout: args.timeoutMs,
+        env: { ...process.env, ...args.env },
+        maxBuffer: 1024 * 1024,
+      },
+      (error, stdout, stderr) => {
+        if (error) {
+          const detail = stderr?.trim()
+          const suffix = detail ? `: ${detail}` : ''
+          reject(new Error(`bird read failed${suffix}`))
+          return
+        }
+        const trimmed = stdout.trim()
+        if (!trimmed) {
+          reject(new Error('bird read returned empty output'))
+          return
+        }
+        try {
+          const parsed = JSON.parse(trimmed) as BirdTweetPayload | BirdTweetPayload[]
+          const tweet = Array.isArray(parsed) ? parsed[0] : parsed
+          if (!tweet || typeof tweet.text !== 'string') {
+            reject(new Error('bird read returned invalid payload'))
+            return
+          }
+          resolve(tweet)
+        } catch (parseError) {
+          const message = parseError instanceof Error ? parseError.message : String(parseError)
+          reject(new Error(`bird read returned invalid JSON: ${message}`))
+        }
+      }
+    )
+  })
 }
 
 function withBirdTip(
@@ -1500,6 +1551,10 @@ export async function runCli(
           },
         })
       : null
+  const readTweetWithBirdClient = hasBirdCli(env)
+    ? ({ url, timeoutMs }: { url: string; timeoutMs: number }) =>
+        readTweetWithBird({ url, timeoutMs, env })
+    : null
 
   writeVerbose(stderr, verbose, 'extract start', verboseColor)
   const stopOscProgress = startOscProgress({
@@ -1519,7 +1574,7 @@ export async function runCli(
     if (!progressEnabled) return null
 
     const state: {
-      phase: 'fetching' | 'firecrawl' | 'idle'
+      phase: 'fetching' | 'firecrawl' | 'bird' | 'idle'
       htmlDownloadedBytes: number
       htmlTotalBytes: number | null
       fetchStartedAtMs: number | null
@@ -1606,6 +1661,8 @@ export async function runCli(
               markdownBytes: number | null
               htmlBytes: number | null
             }
+          | { kind: 'bird-start'; url: string }
+          | { kind: 'bird-done'; url: string; ok: boolean; textBytes: number | null }
       ) => {
         if (event.kind === 'fetch-html-start') {
           state.phase = 'fetching'
@@ -1622,6 +1679,24 @@ export async function runCli(
           state.htmlDownloadedBytes = event.downloadedBytes
           state.htmlTotalBytes = event.totalBytes
           updateSpinner(renderFetchLine())
+          return
+        }
+
+        if (event.kind === 'bird-start') {
+          state.phase = 'bird'
+          stopTicker()
+          updateSpinner('Bird: reading tweet…', { force: true })
+          return
+        }
+
+        if (event.kind === 'bird-done') {
+          state.phase = 'bird'
+          stopTicker()
+          if (event.ok && typeof event.textBytes === 'number') {
+            updateSpinner(`Bird: got ${formatBytes(event.textBytes)}…`, { force: true })
+            return
+          }
+          updateSpinner('Bird: failed; fallback…', { force: true })
           return
         }
 
@@ -1651,6 +1726,7 @@ export async function runCli(
     apifyApiToken: apifyToken,
     scrapeWithFirecrawl,
     convertHtmlToMarkdown,
+    readTweetWithBird: readTweetWithBirdClient,
     fetch: trackedFetch,
     onProgress: websiteProgress?.onProgress ?? null,
   })
@@ -1677,13 +1753,20 @@ export async function runCli(
     }
     const extractedContentBytes = Buffer.byteLength(extracted.content, 'utf8')
     const extractedContentSize = formatBytes(extractedContentBytes)
-    const viaFirecrawl = extracted.diagnostics.firecrawl.used ? ', Firecrawl' : ''
+    const viaSources: string[] = []
+    if (extracted.diagnostics.strategy === 'bird') {
+      viaSources.push('bird')
+    }
+    if (extracted.diagnostics.firecrawl.used) {
+      viaSources.push('Firecrawl')
+    }
+    const viaSourceLabel = viaSources.length > 0 ? `, ${viaSources.join('+')}` : ''
     if (progressEnabled) {
       websiteProgress?.stop?.()
       spinner.setText(
         extractOnly
-          ? `Extracted (${extractedContentSize})`
-          : `Summarizing (sent ${extractedContentSize}${viaFirecrawl})…`
+          ? `Extracted (${extractedContentSize}${viaSourceLabel})`
+          : `Summarizing (sent ${extractedContentSize}${viaSourceLabel})…`
       )
     }
     writeVerbose(

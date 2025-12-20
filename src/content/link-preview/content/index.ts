@@ -30,6 +30,7 @@ const BLOCKED_HTML_HINT_PATTERN =
   /access denied|attention required|captcha|cloudflare|enable javascript|forbidden|please turn javascript on|verify you are human/i
 const MIN_HTML_CONTENT_CHARACTERS = 200
 const MIN_HTML_DOCUMENT_CHARACTERS_FOR_FALLBACK = 5000
+const TWITTER_HOSTS = new Set(['x.com', 'twitter.com', 'mobile.twitter.com'])
 
 function stripLeadingTitle(content: string, title: string | null | undefined): string {
   if (!(content && title)) {
@@ -63,6 +64,17 @@ function shouldFallbackToFirecrawl(html: string): boolean {
   // likely complete (e.g. https://example.com). Only treat "thin" content as a Firecrawl signal when
   // the HTML document itself is large (SSR/app-shell pages, blocked pages without a match, etc.).
   return html.length >= MIN_HTML_DOCUMENT_CHARACTERS_FOR_FALLBACK
+}
+
+function isTwitterStatusUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, '')
+    if (!TWITTER_HOSTS.has(host)) return false
+    return /\/status\/\d+/.test(parsed.pathname)
+  } catch {
+    return false
+  }
 }
 
 export async function fetchLinkContent(
@@ -136,6 +148,66 @@ export async function fetchLinkContent(
       'Firecrawl returned empty content'
     )
     return null
+  }
+
+  const attemptBird = async (): Promise<ExtractedLinkContent | null> => {
+    if (!deps.readTweetWithBird || !isTwitterStatusUrl(url)) {
+      return null
+    }
+
+    deps.onProgress?.({ kind: 'bird-start', url })
+    try {
+      const tweet = await deps.readTweetWithBird({ url, timeoutMs })
+      const text = tweet?.text?.trim() ?? ''
+      if (text.length === 0) {
+        deps.onProgress?.({ kind: 'bird-done', url, ok: false, textBytes: null })
+        return null
+      }
+
+      const title = tweet?.author?.username ? `@${tweet.author.username}` : null
+      const description = null
+      const siteName = 'X'
+      const transcriptResolution = { text: null, source: null }
+      const transcriptDiagnostics = ensureTranscriptDiagnostics(
+        transcriptResolution,
+        cacheMode ?? 'default'
+      )
+      const result = finalizeExtractedLinkContent({
+        url,
+        baseContent: text,
+        maxCharacters,
+        title,
+        description,
+        siteName,
+        transcriptResolution,
+        diagnostics: {
+          strategy: 'bird',
+          firecrawl: firecrawlDiagnostics,
+          markdown: {
+            requested: markdownRequested,
+            used: false,
+            provider: null,
+            notes: 'Bird tweet fetch provides plain text',
+          },
+          transcript: transcriptDiagnostics,
+        },
+      })
+      deps.onProgress?.({
+        kind: 'bird-done',
+        url,
+        ok: true,
+        textBytes: Buffer.byteLength(result.content, 'utf8'),
+      })
+      return result
+    } catch {
+      deps.onProgress?.({ kind: 'bird-done', url, ok: false, textBytes: null })
+      return null
+    }
+  }
+
+  const birdResult = await attemptBird()
+  if (birdResult) {
+    return birdResult
   }
 
   if (firecrawlMode === 'always') {

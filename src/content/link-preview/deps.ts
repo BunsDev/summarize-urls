@@ -22,6 +22,8 @@ export type LinkPreviewProgressEvent =
       markdownBytes: number | null
       htmlBytes: number | null
     }
+  | { kind: 'bird-start'; url: string }
+  | { kind: 'bird-done'; url: string; ok: boolean; textBytes: number | null }
 
 export interface FirecrawlScrapeResult {
   markdown: string
@@ -41,6 +43,18 @@ export type ConvertHtmlToMarkdown = (args: {
   siteName: string | null
   timeoutMs: number
 }) => Promise<string>
+
+export type BirdTweetPayload = {
+  id?: string
+  text: string
+  author?: { username?: string; name?: string }
+  createdAt?: string
+}
+
+export type ReadTweetWithBird = (args: {
+  url: string
+  timeoutMs: number
+}) => Promise<BirdTweetPayload | null>
 
 export interface TranscriptCacheGetResult {
   content: string | null
@@ -70,5 +84,6 @@ export interface LinkPreviewDeps {
   apifyApiToken: string | null
   convertHtmlToMarkdown: ConvertHtmlToMarkdown | null
   transcriptCache: TranscriptCache | null
+  readTweetWithBird?: ReadTweetWithBird | null
   onProgress?: ((event: LinkPreviewProgressEvent) => void) | null
 }
