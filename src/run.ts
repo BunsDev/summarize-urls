@@ -386,6 +386,19 @@ function isGoogleStreamingUnsupportedError(error: unknown): boolean {
   )
 }
 
+function isStreamingTimeoutError(error: unknown): boolean {
+  if (!error) return false
+  const message =
+    typeof error === 'string'
+      ? error
+      : error instanceof Error
+        ? error.message
+        : typeof (error as { message?: unknown }).message === 'string'
+          ? String((error as { message?: unknown }).message)
+          : ''
+  return /timed out/i.test(message)
+}
+
 function attachRichHelp(
   program: Command,
   env: Record<string, string | undefined>,
@@ -955,7 +968,30 @@ export async function runCli(
           fetchImpl: trackedFetch,
         })
       } catch (error) {
-        if (
+        if (isStreamingTimeoutError(error)) {
+          writeVerbose(
+            stderr,
+            verbose,
+            `Streaming timed out for ${parsedModelEffective.canonical}; falling back to non-streaming.`,
+            verboseColor
+          )
+          const result = await summarizeWithModelId({
+            modelId: parsedModelEffective.canonical,
+            prompt: promptPayload,
+            maxOutputTokens: maxOutputTokensForCall ?? undefined,
+            timeoutMs,
+            fetchImpl: trackedFetch,
+            apiKeys: apiKeysForLlm,
+          })
+          llmCalls.push({
+            provider: result.provider,
+            model: result.canonicalModelId,
+            usage: result.usage,
+            purpose: 'summary',
+          })
+          summary = result.text
+          streamResult = null
+        } else if (
           parsedModelEffective.provider === 'google' &&
           isGoogleStreamingUnsupportedError(error)
         ) {
@@ -1814,7 +1850,30 @@ export async function runCli(
           fetchImpl: trackedFetch,
         })
       } catch (error) {
-        if (
+        if (isStreamingTimeoutError(error)) {
+          writeVerbose(
+            stderr,
+            verbose,
+            `Streaming timed out for ${parsedModelEffective.canonical}; falling back to non-streaming.`,
+            verboseColor
+          )
+          const result = await summarizeWithModelId({
+            modelId: parsedModelEffective.canonical,
+            prompt,
+            maxOutputTokens: maxOutputTokensForCall ?? undefined,
+            timeoutMs,
+            fetchImpl: trackedFetch,
+            apiKeys: apiKeysForLlm,
+          })
+          llmCalls.push({
+            provider: result.provider,
+            model: result.canonicalModelId,
+            usage: result.usage,
+            purpose: 'summary',
+          })
+          summary = result.text
+          streamResult = null
+        } else if (
           parsedModelEffective.provider === 'google' &&
           isGoogleStreamingUnsupportedError(error)
         ) {

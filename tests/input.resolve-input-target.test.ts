@@ -70,6 +70,13 @@ describe('resolveInputTarget', () => {
     })
   })
 
+  it('preserves parentheses inside URL paths', () => {
+    expect(resolveInputTarget('https://en.wikipedia.org/wiki/Set_(mathematics)')).toEqual({
+      kind: 'url',
+      url: 'https://en.wikipedia.org/wiki/Set_(mathematics)',
+    })
+  })
+
   it('throws when neither file nor URL can be resolved', () => {
     expect(() => resolveInputTarget('not a url')).toThrow(/Invalid URL or file path/i)
   })

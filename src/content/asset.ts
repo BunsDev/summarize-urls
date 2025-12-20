@@ -30,7 +30,20 @@ function normalizeUrlInput(raw: string): string {
 
 function trimLikelyUrlPunctuation(raw: string): string {
   let value = raw.trim()
+  const hasUnbalancedClosing = (input: string, open: string, close: string): boolean => {
+    let openCount = 0
+    let closeCount = 0
+    for (const char of input) {
+      if (char === open) openCount += 1
+      else if (char === close) closeCount += 1
+    }
+    return closeCount > openCount
+  }
   while (value.length > 0 && /[)\].,;:'">}”’»]/.test(value[value.length - 1] ?? '')) {
+    const last = value[value.length - 1] ?? ''
+    if (last === ')' && !hasUnbalancedClosing(value, '(', ')')) break
+    if (last === ']' && !hasUnbalancedClosing(value, '[', ']')) break
+    if (last === '}' && !hasUnbalancedClosing(value, '{', '}')) break
     value = value.slice(0, -1)
   }
   while (value.length > 0 && /^[('"<{[\]“‘«]/.test(value[0] ?? '')) {

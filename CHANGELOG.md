@@ -14,11 +14,15 @@
 - Show Firecrawl fallback status and reason when scraping kicks in.
 - Enforce a hard deadline for stalled streaming LLM responses.
 - Merge cumulative streaming chunks correctly and keep stream-merge for streaming output.
+- Fall back to non-streaming when streaming requests time out.
+- Preserve parentheses in URL paths when resolving inputs.
 
 ### Tests
 
 - Add CLI + live coverage for prompt length capping.
 - Add coverage for cumulative stream merge handling.
+- Add coverage for streaming timeout fallback.
+- Add live coverage for Wikipedia URLs with parentheses.
 
 ### Docs
 
