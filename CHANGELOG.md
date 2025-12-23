@@ -13,7 +13,7 @@
 - Auto mode uses CLI models only when `cli.enabled` is set; order follows the list (recommended: Gemini → Claude → Codex).
 - `cli.enabled` is an allowlist for CLI usage.
 - Remove support for `cli.disabled` and `cli.<provider>.enabled`.
-- OpenRouter: stop sending provider-order headers; `OPENROUTER_PROVIDERS` is deprecated (ignored).
+- OpenRouter: stop sending provider-order headers.
 - Document CLI ordering + disable options in README and CLI/auto docs.
 - `--model free`: when OpenRouter rejects routing with “No allowed providers”, print the exact provider names to allow.
 
@@ -88,7 +88,7 @@
 
 ### Changes
 
-- Add native OpenRouter support via `OPENROUTER_API_KEY` with optional provider ordering (`OPENROUTER_PROVIDERS`).
+- Add native OpenRouter support via `OPENROUTER_API_KEY`.
 - Remove map-reduce summarization; reject inputs that exceed the model's context window.
 - Preflight text prompts with the GPT tokenizer and the model’s max input tokens.
 - Reject text files over 10 MB before tokenization.

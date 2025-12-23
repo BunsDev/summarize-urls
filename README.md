@@ -241,7 +241,6 @@ OpenRouter (OpenAI-compatible):
 
 - Set `OPENROUTER_API_KEY=...`
 - Prefer forcing OpenRouter per model id: `--model openrouter/<author>/<slug>` (e.g. `openrouter/meta-llama/llama-3.1-8b-instruct:free`)
-- Optional: `OPENROUTER_PROVIDERS=...` to specify provider fallback order (e.g. `groq,google-vertex`)
 
 Example:
 
@@ -252,7 +251,7 @@ OPENROUTER_API_KEY=sk-or-... summarize "https://example.com" --model openrouter/
 With provider ordering (falls back through providers in order):
 
 ```bash
-OPENROUTER_API_KEY=sk-or-... OPENROUTER_PROVIDERS="groq,google-vertex" summarize "https://example.com"
+OPENROUTER_API_KEY=sk-or-... summarize "https://example.com"
 ```
 
 Legacy: `OPENAI_BASE_URL=https://openrouter.ai/api/v1` (and either `OPENAI_API_KEY` or `OPENROUTER_API_KEY`) also works.

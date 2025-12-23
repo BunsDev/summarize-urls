@@ -812,7 +812,6 @@ ${heading('Env Vars')}
   OPENAI_API_KEY        optional (required for openai/... models)
   OPENAI_BASE_URL       optional (OpenAI-compatible API endpoint; e.g. OpenRouter)
   OPENROUTER_API_KEY    optional (routes openai/... models through OpenRouter)
-  OPENROUTER_PROVIDERS  deprecated (ignored)
   GEMINI_API_KEY        optional (required for google/... models)
   ANTHROPIC_API_KEY     optional (required for anthropic/... models)
   CLAUDE_PATH           optional (path to Claude CLI binary)

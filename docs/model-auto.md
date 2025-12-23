@@ -31,10 +31,6 @@ Behavior:
 - If you pass an `openrouter/...` model id, the request uses OpenRouter (and requires `OPENROUTER_API_KEY`).
 - If you pass a native model id, the CLI prefers the native provider SDK when its key is available, and can fall back to OpenRouter when no native key exists (and `OPENROUTER_API_KEY` is set).
 
-OpenRouter provider ordering:
-
-- `OPENROUTER_PROVIDERS` is deprecated and ignored.
-
 ## How selection works
 
 - Uses the order you provide in `model.rules[].candidates[]` (or `bands[].candidates[]`).
