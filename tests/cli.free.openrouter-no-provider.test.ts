@@ -33,7 +33,7 @@ describe('model bags: OpenRouter provider routing errors', () => {
     writeFileSync(
       join(root, '.summarize', 'config.json'),
       JSON.stringify({
-        bags: {
+        models: {
           free: { mode: 'auto', rules: [{ candidates: ['openrouter/openai/gpt-5-nano'] }] },
         },
       }),

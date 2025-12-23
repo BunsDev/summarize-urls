@@ -128,10 +128,10 @@ describe('config loading', () => {
     expect(() => loadSummarizeConfig({ env: { HOME: root } })).toThrow(/must include either "id"/)
   })
 
-  it('loads named models (bags alias)', () => {
+  it('loads named models', () => {
     const { root } = writeJsonConfig({
       model: 'auto',
-      bags: {
+      models: {
         fast: { id: 'openai/gpt-5-mini' },
         or: 'openrouter/openai/gpt-5-mini',
       },
@@ -146,9 +146,16 @@ describe('config loading', () => {
     })
   })
 
+  it('rejects deprecated "bags" key', () => {
+    const { root } = writeJsonConfig({
+      bags: { fast: { id: 'openai/gpt-5-mini' } },
+    })
+    expect(() => loadSummarizeConfig({ env: { HOME: root } })).toThrow(/bags.*no longer supported/i)
+  })
+
   it('rejects reserved bag name "auto"', () => {
     const { root } = writeJsonConfig({
-      bags: { auto: { id: 'openai/gpt-5-mini' } },
+      models: { auto: { id: 'openai/gpt-5-mini' } },
     })
     expect(() => loadSummarizeConfig({ env: { HOME: root } })).toThrow(/auto.*reserved/i)
   })

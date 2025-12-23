@@ -1456,7 +1456,7 @@ export async function runCli(
   }
 
   const bagMap = (() => {
-    const raw = config?.models ?? config?.bags
+    const raw = config?.models
     if (!raw) return new Map<string, { name: string; model: ModelConfig }>()
     const out = new Map<string, { name: string; model: ModelConfig }>()
     for (const [name, model] of Object.entries(raw)) {
@@ -1508,7 +1508,7 @@ export async function runCli(
 
     if (requestedModelInputLower !== 'auto' && !requestedModelInput.includes('/')) {
       throw new Error(
-        `Unknown model "${requestedModelInput}". Define it as a bag in ${configPath ?? '~/.summarize/config.json'} under "bags", or use a provider-prefixed id like openai/...`
+        `Unknown model "${requestedModelInput}". Define it as a bag in ${configPath ?? '~/.summarize/config.json'} under "models", or use a provider-prefixed id like openai/...`
       )
     }
 

@@ -35,7 +35,7 @@ describe('model bags: no silent fallback', () => {
     writeFileSync(
       join(root, '.summarize', 'config.json'),
       JSON.stringify({
-        bags: {
+        models: {
           free: { mode: 'auto', rules: [{ candidates: ['openai/gpt-5-mini'] }] },
         },
       }),

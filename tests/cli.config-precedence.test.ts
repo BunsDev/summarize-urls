@@ -96,7 +96,7 @@ describe('cli config precedence', () => {
       configPath,
       JSON.stringify({
         model: 'mybag',
-        bags: {
+        models: {
           mybag: {
             mode: 'auto',
             rules: [{ candidates: ['openai/gpt-5.2'] }],

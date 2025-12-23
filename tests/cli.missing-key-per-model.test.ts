@@ -22,7 +22,9 @@ describe('cli missing API key errors', () => {
     writeFileSync(
       join(root, '.summarize', 'config.json'),
       JSON.stringify({
-        bags: { free: { mode: 'auto', rules: [{ candidates: ['openrouter/openai/gpt-5-mini'] }] } },
+        models: {
+          free: { mode: 'auto', rules: [{ candidates: ['openrouter/openai/gpt-5-mini'] }] },
+        },
       }),
       'utf8'
     )

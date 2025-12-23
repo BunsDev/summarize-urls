@@ -64,10 +64,6 @@ export type SummarizeConfig = {
    * Note: `auto` is reserved and cannot be defined here.
    */
   models?: Record<string, ModelConfig>
-  /**
-   * Deprecated alias for `models`.
-   */
-  bags?: Record<string, ModelConfig>
   media?: {
     videoMode?: VideoMode
   }
@@ -433,7 +429,12 @@ export function loadSummarizeConfig({ env }: { env: Record<string, string | unde
 
   const models = (() => {
     const root = parsed as Record<string, unknown>
-    const raw = typeof root.models !== 'undefined' ? root.models : root.bags
+    if (typeof root.bags !== 'undefined') {
+      throw new Error(
+        `Invalid config file ${path}: "bags" is no longer supported. Use "models" instead.`
+      )
+    }
+    const raw = root.models
     if (typeof raw === 'undefined') return undefined
     if (!isRecord(raw)) {
       throw new Error(`Invalid config file ${path}: "models" must be an object.`)

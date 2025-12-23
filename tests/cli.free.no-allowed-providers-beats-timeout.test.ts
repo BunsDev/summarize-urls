@@ -38,7 +38,7 @@ describe('model bags: OpenRouter "no allowed providers" beats timeout', () => {
     writeFileSync(
       join(root, '.summarize', 'config.json'),
       JSON.stringify({
-        bags: {
+        models: {
           free: {
             mode: 'auto',
             rules: [
