@@ -47,6 +47,7 @@ installed, auto mode can use local CLI models when `cli.enabled` is set (see `do
   - Minimum numeric value: 50 chars.
 - `--max-output-tokens <count>` (ignored for OpenRouter calls; used only for planning/selection)
   - Hard cap for output tokens (optional).
+  - If omitted, no max token parameter is sent (provider default).
   - Minimum numeric value: 16.
 - `--retries <count>`
   - LLM retry attempts on timeout (default: 1).

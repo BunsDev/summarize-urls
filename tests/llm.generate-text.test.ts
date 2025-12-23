@@ -113,6 +113,48 @@ describe('llm generate/stream', () => {
     }
   })
 
+  it('does not include maxOutputTokens when unset', async () => {
+    generateTextMock.mockClear()
+    streamTextMock.mockClear()
+
+    await generateTextWithModelId({
+      modelId: 'openai/gpt-5.2',
+      apiKeys: {
+        openaiApiKey: 'k',
+        xaiApiKey: null,
+        googleApiKey: null,
+        anthropicApiKey: null,
+        openrouterApiKey: null,
+      },
+      prompt: 'hi',
+      timeoutMs: 2000,
+      fetchImpl: globalThis.fetch.bind(globalThis),
+    })
+
+    await streamTextWithModelId({
+      modelId: 'openai/gpt-5.2',
+      apiKeys: {
+        openaiApiKey: 'k',
+        xaiApiKey: null,
+        googleApiKey: null,
+        anthropicApiKey: null,
+        openrouterApiKey: null,
+      },
+      prompt: 'hi',
+      timeoutMs: 2000,
+      fetchImpl: globalThis.fetch.bind(globalThis),
+    })
+
+    expect(generateTextMock).toHaveBeenCalledTimes(1)
+    expect(streamTextMock).toHaveBeenCalledTimes(1)
+
+    const generateArgs = (generateTextMock.mock.calls[0]?.[0] ?? {}) as Record<string, unknown>
+    const streamArgs = (streamTextMock.mock.calls[0]?.[0] ?? {}) as Record<string, unknown>
+
+    expect(generateArgs).not.toHaveProperty('maxOutputTokens')
+    expect(streamArgs).not.toHaveProperty('maxOutputTokens')
+  })
+
   it('routes by provider (streamText) and includes maxOutputTokens when set', async () => {
     streamTextMock.mockClear()
     await streamTextWithModelId({
