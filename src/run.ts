@@ -810,11 +810,25 @@ function createRetryLogger({
   color: boolean
   modelId: string
 }) {
-  return (notice: { attempt: number; maxRetries: number; delayMs: number }) => {
+  return (notice: { attempt: number; maxRetries: number; delayMs: number; error?: unknown }) => {
+    const message =
+      typeof notice.error === 'string'
+        ? notice.error
+        : notice.error instanceof Error
+          ? notice.error.message
+          : typeof (notice.error as { message?: unknown } | null)?.message === 'string'
+            ? String((notice.error as { message?: unknown }).message)
+            : ''
+    const reason =
+      /empty summary/i.test(message)
+        ? 'empty output'
+        : /timed out/i.test(message)
+          ? 'timeout'
+          : 'error'
     writeVerbose(
       stderr,
       verbose,
-      `LLM timeout for ${modelId}; retry ${notice.attempt}/${notice.maxRetries} in ${notice.delayMs}ms.`,
+      `LLM ${reason} for ${modelId}; retry ${notice.attempt}/${notice.maxRetries} in ${notice.delayMs}ms.`,
       color
     )
   }
@@ -2378,10 +2392,10 @@ export async function runCli(
       return { llmModelId: 'google/gemini-3-flash-preview', forceOpenRouter: false }
     }
     if (apiKey) {
-      return { llmModelId: 'openai/gpt-5-nano', forceOpenRouter: false }
+      return { llmModelId: 'openai/gpt-5-mini', forceOpenRouter: false }
     }
     if (openrouterConfigured) {
-      return { llmModelId: 'openai/openai/gpt-5-nano', forceOpenRouter: true }
+      return { llmModelId: 'openai/openai/gpt-5-mini', forceOpenRouter: true }
     }
     if (anthropicConfigured) {
       return { llmModelId: 'anthropic/claude-sonnet-4-5', forceOpenRouter: false }

@@ -11,8 +11,8 @@ This is also the built-in default when you don’t specify a model.
 - On any request error, tries the next attempt.
 - If no model is usable, prints the extracted text (no LLM summary).
 - If CLI tools are available, auto mode prepends CLI attempts unless disabled (see `docs/cli.md`).
-  - Order: Claude → Gemini → Codex.
-  - `cli.enabled` is an allowlist (omit for all).
+  - Default: Gemini only.
+  - `cli.enabled` is an allowlist (omit for Gemini only).
 
 ## “No model needed” shortcut
 
@@ -24,7 +24,7 @@ You’ll still see a `via …` footer when non-trivial extraction happened (Fire
 
 Model ids:
 
-- Native: `<provider>/<model>` (e.g. `openai/gpt-5-nano`, `google/gemini-3-flash-preview`)
+- Native: `<provider>/<model>` (e.g. `openai/gpt-5-mini`, `google/gemini-3-flash-preview`)
 - Forced OpenRouter: `openrouter/<author>/<slug>` (e.g. `openrouter/meta-llama/llama-3.1-8b-instruct:free`)
 
 Behavior:
@@ -78,7 +78,7 @@ Example:
         "bands": [
           {
             "token": { "max": 8000 },
-            "candidates": ["openai/gpt-5-nano"]
+            "candidates": ["openai/gpt-5-mini"]
           },
           {
             "candidates": ["xai/grok-4-fast-non-reasoning"]
@@ -86,7 +86,7 @@ Example:
         ]
       },
       {
-        "candidates": ["openai/gpt-5-nano", "openrouter/openai/gpt-5-nano"]
+        "candidates": ["openai/gpt-5-mini", "openrouter/openai/gpt-5-mini"]
       }
     ]
   },

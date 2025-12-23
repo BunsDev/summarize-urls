@@ -83,7 +83,7 @@ For auto selection with rules:
         "bands": [
           {
             "token": { "max": 8000 },
-            "candidates": ["openai/gpt-5-nano"]
+            "candidates": ["openai/gpt-5-mini"]
           },
           {
             "candidates": ["xai/grok-4-fast-non-reasoning"]
@@ -91,7 +91,7 @@ For auto selection with rules:
         ]
       },
       {
-        "candidates": ["openai/gpt-5-nano", "openrouter/openai/gpt-5-nano"]
+        "candidates": ["openai/gpt-5-mini", "openrouter/openai/gpt-5-mini"]
       }
     ]
   },
@@ -123,6 +123,6 @@ Notes:
 Notes:
 
 - `cli.prefer` defaults to `true` (auto mode prepends CLI attempts).
-- `cli.enabled` is an allowlist (omit for all providers).
+- `cli.enabled` is an allowlist (omit for Gemini only).
 - `cli.<provider>.binary` overrides CLI binary discovery.
 - `cli.<provider>.extraArgs` appends extra CLI args.

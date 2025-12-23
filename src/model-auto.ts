@@ -47,7 +47,6 @@ const DEFAULT_RULES: AutoRule[] = [
     candidates: [
       'google/gemini-3-flash-preview',
       'openai/gpt-5-mini',
-      'openai/gpt-5-nano',
       'anthropic/claude-sonnet-4-5',
     ],
   },
@@ -58,7 +57,7 @@ const DEFAULT_RULES: AutoRule[] = [
         token: { max: 50_000 },
         candidates: [
           'google/gemini-3-flash-preview',
-          'openai/gpt-5-nano',
+          'openai/gpt-5-mini',
           'anthropic/claude-sonnet-4-5',
         ],
       },
@@ -85,14 +84,12 @@ const DEFAULT_RULES: AutoRule[] = [
     candidates: [
       'google/gemini-3-flash-preview',
       'openai/gpt-5-mini',
-      'openai/gpt-5-nano',
       'anthropic/claude-sonnet-4-5',
     ],
   },
   {
     candidates: [
       'google/gemini-3-flash-preview',
-      'openai/gpt-5-nano',
       'openai/gpt-5-mini',
       'anthropic/claude-sonnet-4-5',
       'xai/grok-4-fast-non-reasoning',
@@ -120,9 +117,10 @@ const DEFAULT_CLI_MODELS: Record<CliProvider, string> = {
 
 function isCliProviderEnabled(provider: CliProvider, config: SummarizeConfig | null): boolean {
   const cli = config?.cli
-  if (!cli) return true
-  if (Array.isArray(cli.enabled) && !cli.enabled.includes(provider)) return false
-  return true
+  // Default: only consider Gemini CLI in auto mode unless the user explicitly opts in.
+  if (!cli) return provider === 'gemini'
+  if (Array.isArray(cli.enabled)) return cli.enabled.includes(provider)
+  return provider === 'gemini'
 }
 
 function isCandidateOpenRouter(modelId: string): boolean {

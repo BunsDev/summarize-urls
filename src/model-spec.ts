@@ -57,7 +57,7 @@ export function parseRequestedModelId(raw: string): RequestedModel {
     }
     if (!openrouterModelId.includes('/')) {
       throw new Error(
-        `Invalid OpenRouter model id "${openrouterModelId}". Expected "author/slug" (e.g. "openai/gpt-5-nano").`
+        `Invalid OpenRouter model id "${openrouterModelId}". Expected "author/slug" (e.g. "openai/gpt-5-mini").`
       )
     }
     return {

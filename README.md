@@ -83,7 +83,7 @@ Examples:
 - `anthropic/claude-opus-4-5`
 - `xai/grok-4-fast-non-reasoning`
 - `google/gemini-3-flash-preview`
-- `openrouter/openai/gpt-5-nano` (force OpenRouter)
+- `openrouter/openai/gpt-5-mini` (force OpenRouter)
 
 Note: some models/providers don’t support streaming or certain file media types. When that happens, the CLI prints a friendly error (or auto-disables streaming for that model when supported by the provider).
 
@@ -136,12 +136,12 @@ npx -y @steipete/summarize <input> [flags]
 `--model auto` builds candidate attempts from built-in rules (or your `model.rules` overrides).
 When CLI tools are available, the default prepend order is:
 
-1) Claude CLI
-2) Gemini CLI
-3) Codex CLI
+1) Gemini CLI
+
+Why only Gemini by default: performance. Claude/Codex CLI attempts added noticeable latency + variance in practice, so they’re opt-in via `cli.enabled`.
 
 Then the native provider candidates (with OpenRouter fallbacks when configured).
-If `cli.enabled` is omitted, all CLI providers are enabled by default.
+If `cli.enabled` is omitted, only the Gemini CLI is enabled by default.
 
 Disable CLI attempts (common):
 
@@ -155,7 +155,7 @@ Limit to specific CLIs:
 
 ```json
 {
-  "cli": { "enabled": ["claude"] }
+  "cli": { "enabled": ["claude", "gemini"] }
 }
 ```
 

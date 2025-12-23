@@ -32,7 +32,7 @@ export type AutoRule = {
    * Candidate model ids (ordered).
    *
    * - Native: `openai/...`, `google/...`, `xai/...`, `anthropic/...`
-   * - OpenRouter (forced): `openrouter/<provider>/<model>` (e.g. `openrouter/openai/gpt-5-nano`)
+   * - OpenRouter (forced): `openrouter/<provider>/<model>` (e.g. `openrouter/openai/gpt-5-mini`)
    */
   candidates?: string[]
 

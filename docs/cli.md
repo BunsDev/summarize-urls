@@ -11,11 +11,13 @@ Summarize can use installed CLIs (Claude, Codex, Gemini) as local model backends
 ## Auto mode
 
 When a CLI is installed, auto mode prepends CLI attempts before API models in this order:
-Claude → Gemini → Codex.
+Gemini.
+
+Why: performance. Claude/Codex CLIs were slower + higher variance in practice, so they’re opt-in via `cli.enabled`.
 
 Control which CLIs are considered:
 
-- `cli.enabled` is an allowlist (when omitted, all three are enabled).
+- `cli.enabled` is an allowlist (when omitted, only `gemini` is enabled).
 - Set `cli.enabled: []` to disable all CLI attempts in auto mode.
 
 Disable globally:
