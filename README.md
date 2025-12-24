@@ -4,6 +4,7 @@ Fast CLI for summarizing *anything you can point at*:
 
 - Web pages (article extraction; Firecrawl fallback if sites block agents)
 - YouTube links (best-effort transcripts, optional Apify fallback)
+- Podcast RSS feeds (best-effort: transcribes latest enclosure via Whisper when configured)
 - Remote files (PDFs/images/audio/video via URL — downloaded and forwarded to the model)
 - Local files (PDFs/images/audio/video/text — forwarded or inlined; support depends on provider/model)
 
@@ -56,6 +57,24 @@ YouTube (supports `youtube.com` and `youtu.be`):
 
 ```bash
 npx -y @steipete/summarize "https://youtu.be/dQw4w9WgXcQ" --youtube auto
+```
+
+Podcast RSS feed (transcribes latest episode enclosure):
+
+```bash
+npx -y @steipete/summarize "https://feeds.npr.org/500005/podcast.xml"
+```
+
+Apple Podcasts episode page (extracts stream URL, transcribes via Whisper):
+
+```bash
+npx -y @steipete/summarize "https://podcasts.apple.com/us/podcast/2424-jelly-roll/id360084272?i=1000740717432"
+```
+
+Spotify episode page (best-effort; resolves to full episode via iTunes/RSS enclosure when available — not preview clips; may fail for Spotify-exclusive shows):
+
+```bash
+npx -y @steipete/summarize "https://open.spotify.com/episode/5auotqWAXhhKyb9ymCuBJY"
 ```
 
 ## What file types work?
@@ -189,6 +208,10 @@ Environment variables for yt-dlp mode:
 - `FAL_KEY` - FAL AI Whisper fallback
 
 Apify costs money but tends to be more reliable when captions exist.
+
+## Media transcription (Whisper)
+
+`--video-mode transcript` forces audio/video inputs (local files or direct media URLs) through Whisper first, then summarizes the transcript text. Requires `OPENAI_API_KEY` or `FAL_KEY`.
 
 ## Configuration
 
