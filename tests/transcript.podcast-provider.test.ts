@@ -33,7 +33,7 @@ describe('podcast transcript provider module', () => {
 
     const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString()
-      if (url == 'https://example.com/transcript.json') {
+      if (url === 'https://example.com/transcript.json') {
         return new Response(JSON.stringify([{ text: 'Hello' }, { text: 'world' }]), {
           status: 200,
           headers: { 'content-type': 'application/json' },
@@ -44,7 +44,12 @@ describe('podcast transcript provider module', () => {
 
     const result = await fetchTranscript(
       { url: 'https://example.com/feed.xml', html: xml, resourceKey: null },
-      { ...baseOptions, fetch: fetchImpl as unknown as typeof fetch, openaiApiKey: null, falApiKey: null }
+      {
+        ...baseOptions,
+        fetch: fetchImpl as unknown as typeof fetch,
+        openaiApiKey: null,
+        falApiKey: null,
+      }
     )
 
     expect(result.source).toBe('podcastTranscript')
@@ -87,10 +92,13 @@ Hello from VTT
           headers: { 'content-type': 'application/json' },
         })
       }
-      if (url == feedUrl) {
-        return new Response(feedXml, { status: 200, headers: { 'content-type': 'application/xml' } })
+      if (url === feedUrl) {
+        return new Response(feedXml, {
+          status: 200,
+          headers: { 'content-type': 'application/xml' },
+        })
       }
-      if (url == transcriptUrl) {
+      if (url === transcriptUrl) {
         return new Response(vtt, { status: 200, headers: { 'content-type': 'text/vtt' } })
       }
       throw new Error(`Unexpected fetch: ${url}`)
@@ -98,7 +106,12 @@ Hello from VTT
 
     const result = await fetchTranscript(
       { url: appleUrl, html: null, resourceKey: null },
-      { ...baseOptions, fetch: fetchImpl as unknown as typeof fetch, openaiApiKey: null, falApiKey: null }
+      {
+        ...baseOptions,
+        fetch: fetchImpl as unknown as typeof fetch,
+        openaiApiKey: null,
+        falApiKey: null,
+      }
     )
 
     expect(result.source).toBe('podcastTranscript')

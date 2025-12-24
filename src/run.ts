@@ -1173,7 +1173,6 @@ function formatModelLabelForDisplay(model: string): string {
   return trimmed
 }
 
-
 function writeFinishLine({
   stderr,
   elapsedMs,
@@ -1205,11 +1204,10 @@ function writeFinishLine({
     : null
 
   const compactTranscript =
-    !detailed && extraParts ? extraParts.find((part) => part.startsWith('txc=')) ?? null : null
-  const compactTranscriptLabel =
-    compactTranscript && compactTranscript.startsWith('txc=')
-      ? compactTranscript.slice('txc='.length)
-      : null
+    !detailed && extraParts ? (extraParts.find((part) => part.startsWith('txc=')) ?? null) : null
+  const compactTranscriptLabel = compactTranscript?.startsWith('txc=')
+    ? compactTranscript.slice('txc='.length)
+    : null
   const filteredExtraParts =
     compactTranscriptLabel && extraParts
       ? extraParts.filter((part) => part !== compactTranscript)
@@ -1346,7 +1344,9 @@ function buildLengthPartsForFinishLine(
   return compactTranscript ? [`txc=${compactTranscript}`] : null
 }
 
-function buildCompactTranscriptPart(extracted: Parameters<typeof buildDetailedLengthPartsForExtracted>[0]): string | null {
+function buildCompactTranscriptPart(
+  extracted: Parameters<typeof buildDetailedLengthPartsForExtracted>[0]
+): string | null {
   const isYouTube =
     extracted.siteName === 'YouTube' || /youtube\.com|youtu\.be/i.test(extracted.url)
   if (!isYouTube && !extracted.transcriptCharacters) return null

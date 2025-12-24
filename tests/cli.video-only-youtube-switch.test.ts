@@ -16,8 +16,17 @@ function collectStream({ isTTY }: { isTTY: boolean }) {
 
 // Deterministic spinner: start writes once, updates are no-ops.
 vi.mock('ora', () => {
+  type MockSpinner = {
+    isSpinning: boolean
+    text: string
+    stop: () => void
+    clear: () => void
+    start: () => MockSpinner
+    setText: (text: string) => void
+  }
+
   const ora = (opts: { text: string; stream: NodeJS.WritableStream }) => {
-    const spinner: any = {
+    const spinner: MockSpinner = {
       isSpinning: true,
       text: opts.text,
       stop() {
@@ -132,16 +141,21 @@ describe('cli video-only pages', () => {
     const stdout = collectStream({ isTTY: false })
     const stderr = collectStream({ isTTY: true })
 
-    await runCli(['--extract', '--metrics', 'off', '--timeout', '2s', 'https://example.com/video-only'], {
-      env: {},
-      fetch: vi.fn() as unknown as typeof fetch,
-      stdout: stdout.stream,
-      stderr: stderr.stream,
-    })
+    await runCli(
+      ['--extract', '--metrics', 'off', '--timeout', '2s', 'https://example.com/video-only'],
+      {
+        env: {},
+        fetch: vi.fn() as unknown as typeof fetch,
+        stdout: stdout.stream,
+        stderr: stderr.stream,
+      }
+    )
 
     expect(mocks.fetchLinkContent).toHaveBeenCalledTimes(2)
     expect(mocks.fetchLinkContent.mock.calls[0]?.[0]).toBe('https://example.com/video-only')
-    expect(mocks.fetchLinkContent.mock.calls[1]?.[0]).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+    expect(mocks.fetchLinkContent.mock.calls[1]?.[0]).toBe(
+      'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+    )
     expect(stdout.getText()).toContain('Transcript: hello')
   })
 })

@@ -1142,9 +1142,7 @@ function decodeXmlEntities(value: string): string {
 function extractPodcastTranscriptCandidatesFromItem(
   itemXml: string
 ): Array<{ url: string; type: string | null }> {
-  const matches = itemXml.matchAll(
-    /<podcast:transcript\b[^>]*\burl\s*=\s*(['"])([^'"]+)\1[^>]*>/gi
-  )
+  const matches = itemXml.matchAll(/<podcast:transcript\b[^>]*\burl\s*=\s*(['"])([^'"]+)\1[^>]*>/gi)
   const results: Array<{ url: string; type: string | null }> = []
   for (const match of matches) {
     const tag = match[0]
@@ -1183,10 +1181,7 @@ function vttToPlainText(raw: string): string {
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
     .filter((line) => line.toUpperCase() !== 'WEBVTT')
-    .filter(
-      (line) =>
-        !/^\d{2}:\d{2}:\d{2}\.\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}\.\d{3}/.test(line)
-    )
+    .filter((line) => !/^\d{2}:\d{2}:\d{2}\.\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}\.\d{3}/.test(line))
     .filter((line) => !/^\d+$/.test(line))
     .filter((line) => !/^(NOTE|STYLE|REGION)\b/i.test(line))
   return lines.join('\n').trim()
@@ -1205,12 +1200,15 @@ function jsonTranscriptToPlainText(payload: unknown): string | null {
 
   if (payload && typeof payload === 'object') {
     const record = payload as Record<string, unknown>
-    if (typeof record.transcript === 'string' && record.transcript.trim()) return record.transcript.trim()
+    if (typeof record.transcript === 'string' && record.transcript.trim())
+      return record.transcript.trim()
     if (typeof record.text === 'string' && record.text.trim()) return record.text.trim()
     const segments = record.segments
     if (Array.isArray(segments)) {
       const parts = segments
-        .map((row) => (row && typeof row === 'object' ? (row as Record<string, unknown>).text : null))
+        .map((row) =>
+          row && typeof row === 'object' ? (row as Record<string, unknown>).text : null
+        )
         .filter((t): t is string => typeof t === 'string')
         .map((t) => t.trim())
         .filter(Boolean)
@@ -1258,7 +1256,8 @@ async function tryFetchTranscriptFromFeedXml({
       })
       if (!res.ok) throw new Error(`transcript fetch failed (${res.status})`)
 
-      const contentType = res.headers.get('content-type')?.toLowerCase().split(';')[0]?.trim() ?? null
+      const contentType =
+        res.headers.get('content-type')?.toLowerCase().split(';')[0]?.trim() ?? null
       const hintedType = preferred.type?.toLowerCase().split(';')[0]?.trim() ?? null
       const effectiveType = hintedType ?? contentType
 
@@ -1293,7 +1292,6 @@ async function tryFetchTranscriptFromFeedXml({
         )
         return null
       }
-      continue
     }
   }
 
@@ -1356,7 +1354,7 @@ async function transcribeMediaUrl({
 
   const modelId =
     providerHint === 'cpp'
-      ? (await resolveWhisperCppModelNameForDisplay()) ?? 'whisper.cpp'
+      ? ((await resolveWhisperCppModelNameForDisplay()) ?? 'whisper.cpp')
       : openaiApiKey && falApiKey
         ? 'whisper-1->fal-ai/wizper'
         : openaiApiKey

@@ -212,7 +212,7 @@ async function transcribeWithWhisperCppFile({
             const raw = Number(match[1])
             if (!Number.isFinite(raw)) continue
             const pct = Math.max(0, Math.min(100, Math.round(raw)))
-            if (pct == lastProgressPercent) continue
+            if (pct === lastProgressPercent) continue
             lastProgressPercent = pct
             const processed =
               typeof totalDurationSeconds === 'number' && totalDurationSeconds > 0

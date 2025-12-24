@@ -55,26 +55,24 @@ export const fetchTranscriptWithYtDlp = async ({
   }
 
   const progress = typeof onProgress === 'function' ? onProgress : null
-  const providerHint: 'cpp' | 'openai' | 'fal' | 'openai->fal' | 'unknown' =
-    hasLocalWhisper
-      ? 'cpp'
-      : openaiApiKey && falApiKey
-        ? 'openai->fal'
-        : openaiApiKey
-          ? 'openai'
-          : falApiKey
-            ? 'fal'
-            : 'unknown'
-  const modelId =
-    hasLocalWhisper
-      ? 'whisper.cpp'
-      : openaiApiKey && falApiKey
-        ? 'whisper-1->fal-ai/wizper'
-        : openaiApiKey
-          ? 'whisper-1'
-          : falApiKey
-            ? 'fal-ai/wizper'
-            : null
+  const providerHint: 'cpp' | 'openai' | 'fal' | 'openai->fal' | 'unknown' = hasLocalWhisper
+    ? 'cpp'
+    : openaiApiKey && falApiKey
+      ? 'openai->fal'
+      : openaiApiKey
+        ? 'openai'
+        : falApiKey
+          ? 'fal'
+          : 'unknown'
+  const modelId = hasLocalWhisper
+    ? 'whisper.cpp'
+    : openaiApiKey && falApiKey
+      ? 'whisper-1->fal-ai/wizper'
+      : openaiApiKey
+        ? 'whisper-1'
+        : falApiKey
+          ? 'fal-ai/wizper'
+          : null
 
   const outputFile = join(tmpdir(), `summarize-${randomUUID()}.mp3`)
   try {

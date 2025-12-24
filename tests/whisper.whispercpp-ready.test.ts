@@ -4,13 +4,16 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+type MockProc = EventEmitter & {
+  stderr: EventEmitter & { setEncoding: () => void }
+}
+
 vi.mock('node:child_process', () => {
   return {
     spawn: (_bin: string, args: string[]) => {
-      const proc = new EventEmitter() as any
-
-      proc.stderr = new EventEmitter() as any
-      proc.stderr.setEncoding = () => {}
+      const proc: MockProc = Object.assign(new EventEmitter(), {
+        stderr: Object.assign(new EventEmitter(), { setEncoding: () => {} }),
+      })
 
       // Validate we only use this mock for availability checks in these tests.
       if (!args.includes('--help')) {
