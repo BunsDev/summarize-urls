@@ -199,6 +199,49 @@ export const fetchTranscript = async (
 
       const feedUrl = await resolvePodcastFeedUrlFromItunesSearch(options.fetch, showTitle)
       if (!feedUrl) {
+        const episodeFromSearch = await resolvePodcastEpisodeFromItunesSearch(
+          options.fetch,
+          showTitle,
+          episodeTitle
+        )
+        if (episodeFromSearch) {
+          const missing = ensureTranscriptionProvider()
+          if (missing) return missing
+          pushOnce('whisper')
+          const result = await transcribeMediaUrl({
+            fetchImpl: options.fetch,
+            url: episodeFromSearch.episodeUrl,
+            filenameHint: 'episode.mp3',
+            durationSecondsHint: episodeFromSearch.durationSeconds,
+            openaiApiKey: options.openaiApiKey,
+            falApiKey: options.falApiKey,
+            notes,
+            progress: {
+              url: context.url,
+              service: 'podcast',
+              onProgress: options.onProgress ?? null,
+            },
+          })
+          if (result.text) {
+            notes.push('Resolved Spotify episode via iTunes episode search')
+            return {
+              text: result.text,
+              source: 'whisper',
+              attemptedProviders,
+              notes: notes.length > 0 ? notes.join('; ') : null,
+              metadata: {
+                provider: 'podcast',
+                kind: 'spotify_itunes_search_episode',
+                episodeId: spotifyEpisodeId,
+                showTitle,
+                episodeTitle: episodeFromSearch.episodeTitle,
+                episodeUrl: episodeFromSearch.episodeUrl,
+                durationSeconds: episodeFromSearch.durationSeconds,
+                transcriptionProvider: result.provider,
+              },
+            }
+          }
+        }
         throw new Error(
           `Spotify episode audio appears DRM-protected; could not resolve RSS feed via iTunes Search API for show "${showTitle}"`
         )
@@ -241,6 +284,49 @@ export const fetchTranscript = async (
       }
       const match = extractEnclosureForEpisode(feedXml, episodeTitle)
       if (!match) {
+        const episodeFromSearch = await resolvePodcastEpisodeFromItunesSearch(
+          options.fetch,
+          showTitle,
+          episodeTitle
+        )
+        if (episodeFromSearch) {
+          const missing = ensureTranscriptionProvider()
+          if (missing) return missing
+          pushOnce('whisper')
+          const result = await transcribeMediaUrl({
+            fetchImpl: options.fetch,
+            url: episodeFromSearch.episodeUrl,
+            filenameHint: 'episode.mp3',
+            durationSecondsHint: episodeFromSearch.durationSeconds,
+            openaiApiKey: options.openaiApiKey,
+            falApiKey: options.falApiKey,
+            notes,
+            progress: {
+              url: context.url,
+              service: 'podcast',
+              onProgress: options.onProgress ?? null,
+            },
+          })
+          if (result.text) {
+            notes.push('Resolved Spotify episode via iTunes episode search')
+            return {
+              text: result.text,
+              source: 'whisper',
+              attemptedProviders,
+              notes: notes.length > 0 ? notes.join('; ') : null,
+              metadata: {
+                provider: 'podcast',
+                kind: 'spotify_itunes_search_episode',
+                episodeId: spotifyEpisodeId,
+                showTitle,
+                episodeTitle: episodeFromSearch.episodeTitle,
+                episodeUrl: episodeFromSearch.episodeUrl,
+                durationSeconds: episodeFromSearch.durationSeconds,
+                transcriptionProvider: result.provider,
+              },
+            }
+          }
+        }
         throw new Error(`Episode enclosure not found in RSS feed for "${episodeTitle}"`)
       }
       const enclosureUrl = decodeXmlEntities(match.enclosureUrl)
@@ -1035,6 +1121,67 @@ async function resolvePodcastFeedUrlFromItunesSearch(
   const best = exact ?? results[0]
   const feedUrl = typeof best?.feedUrl === 'string' ? best.feedUrl.trim() : ''
   return feedUrl && /^https?:\/\//i.test(feedUrl) ? feedUrl : null
+}
+
+async function resolvePodcastEpisodeFromItunesSearch(
+  fetchImpl: typeof fetch,
+  showTitle: string,
+  episodeTitle: string
+): Promise<{ episodeUrl: string; durationSeconds: number | null; episodeTitle: string } | null> {
+  const query = new URLSearchParams({
+    term: `${showTitle} ${episodeTitle}`,
+    media: 'podcast',
+    entity: 'podcastEpisode',
+    limit: '25',
+  })
+  const res = await fetchImpl(`${ITUNES_SEARCH_URL}?${query.toString()}`, {
+    redirect: 'follow',
+    signal: AbortSignal.timeout(TRANSCRIPTION_TIMEOUT_MS),
+    headers: { accept: 'application/json' },
+  })
+  if (!res.ok) return null
+  const payload = (await res.json()) as unknown
+  const results = asRecordArray(getJsonArray(payload, ['results']))
+  if (results.length === 0) return null
+
+  const normalizedShow = normalizeLooseTitle(showTitle)
+  const normalizedEpisode = normalizeLooseTitle(episodeTitle)
+
+  const candidates = results
+    .map((record) => {
+      const title = getRecordString(record, 'trackName')
+      const collection = getRecordString(record, 'collectionName')
+      const episodeUrl = getRecordString(record, 'episodeUrl')
+      const durationMs = record['trackTimeMillis']
+      const durationSeconds =
+        typeof durationMs === 'number' && Number.isFinite(durationMs) ? durationMs / 1000 : null
+      return {
+        title,
+        collection,
+        episodeUrl,
+        durationSeconds,
+      }
+    })
+    .filter((entry) => Boolean(entry.episodeUrl) && Boolean(entry.title))
+
+  if (candidates.length === 0) return null
+
+  const exact = candidates.find(
+    (entry) =>
+      normalizeLooseTitle(entry.title ?? '') === normalizedEpisode &&
+      normalizeLooseTitle(entry.collection ?? '') === normalizedShow
+  )
+  const exactEpisode = candidates.find(
+    (entry) => normalizeLooseTitle(entry.title ?? '') === normalizedEpisode
+  )
+  const best = exact ?? exactEpisode ?? candidates[0]
+  if (!best?.episodeUrl) return null
+
+  return {
+    episodeUrl: best.episodeUrl,
+    durationSeconds: best.durationSeconds,
+    episodeTitle: best.title ?? episodeTitle,
+  }
 }
 
 function normalizeLooseTitle(value: string): string {

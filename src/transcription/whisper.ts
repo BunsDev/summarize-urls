@@ -282,6 +282,7 @@ export async function transcribeMediaWithWhisper({
   const notes: string[] = []
 
   const localReady = await isWhisperCppReady()
+  let local: WhisperTranscriptionResult | null = null
   if (localReady) {
     const nameHint = filename?.trim() ? filename.trim() : 'media'
     const tempFile = join(
@@ -291,19 +292,29 @@ export async function transcribeMediaWithWhisper({
     try {
       // Prefer local whisper.cpp when installed + model available (no network, no upload limits).
       await fs.writeFile(tempFile, bytes)
-      const local = await transcribeWithWhisperCppFile({
-        filePath: tempFile,
-        mediaType,
-        totalDurationSeconds,
-        onProgress,
-      })
+      try {
+        local = await transcribeWithWhisperCppFile({
+          filePath: tempFile,
+          mediaType,
+          totalDurationSeconds,
+          onProgress,
+        })
+      } catch (error) {
+        local = {
+          text: null,
+          provider: 'whisper.cpp',
+          error: wrapError('whisper.cpp failed', error),
+          notes: [],
+        }
+      }
       if (local.text) {
         if (local.notes.length > 0) notes.push(...local.notes)
         return { ...local, notes }
       }
-      notes.push(
-        `whisper.cpp failed; falling back to remote Whisper: ${local.error?.message ?? ''}`
-      )
+      if (local.notes.length > 0) notes.push(...local.notes)
+      if (local.error) {
+        notes.push(`whisper.cpp failed; falling back to remote Whisper: ${local.error.message}`)
+      }
     } finally {
       await fs.unlink(tempFile).catch(() => {})
     }
@@ -475,6 +486,7 @@ export async function transcribeMediaFileWithWhisper({
   const notes: string[] = []
 
   const localReady = await isWhisperCppReady()
+  let local: WhisperTranscriptionResult | null = null
   if (localReady) {
     onProgress?.({
       partIndex: null,
@@ -482,17 +494,29 @@ export async function transcribeMediaFileWithWhisper({
       processedDurationSeconds: null,
       totalDurationSeconds,
     })
-    const local = await transcribeWithWhisperCppFile({
-      filePath,
-      mediaType,
-      totalDurationSeconds,
-      onProgress,
-    })
+    try {
+      local = await transcribeWithWhisperCppFile({
+        filePath,
+        mediaType,
+        totalDurationSeconds,
+        onProgress,
+      })
+    } catch (error) {
+      local = {
+        text: null,
+        provider: 'whisper.cpp',
+        error: wrapError('whisper.cpp failed', error),
+        notes: [],
+      }
+    }
     if (local.text) {
       if (local.notes.length > 0) notes.push(...local.notes)
       return { ...local, notes }
     }
-    notes.push(`whisper.cpp failed; falling back to remote Whisper: ${local.error?.message ?? ''}`)
+    if (local.notes.length > 0) notes.push(...local.notes)
+    if (local.error) {
+      notes.push(`whisper.cpp failed; falling back to remote Whisper: ${local.error.message}`)
+    }
   }
 
   if (!openaiApiKey && !falApiKey) {
