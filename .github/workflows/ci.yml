@@ -23,6 +23,8 @@ jobs:
         with:
           repository: steipete/Markdansi
           path: markdansi
+      - name: Link markdansi for pnpm
+        run: ln -sfn "$GITHUB_WORKSPACE/markdansi" "$GITHUB_WORKSPACE/../markdansi"
 
       - name: Setup Node
         uses: actions/setup-node@v6
