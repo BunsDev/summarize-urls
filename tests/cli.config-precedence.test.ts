@@ -108,12 +108,15 @@ describe('cli config precedence', () => {
 
     const stdout = captureStream()
 
-    await runCli(['--timeout', '2s', '--extract', '--format', 'text', '--json', 'https://example.com'], {
-      env: { HOME: tempRoot },
-      fetch: fetchMock as unknown as typeof fetch,
-      stdout: stdout.stream,
-      stderr: noopStream(),
-    })
+    await runCli(
+      ['--timeout', '2s', '--extract', '--format', 'text', '--json', 'https://example.com'],
+      {
+        env: { HOME: tempRoot },
+        fetch: fetchMock as unknown as typeof fetch,
+        stdout: stdout.stream,
+        stderr: noopStream(),
+      }
+    )
 
     const parsed = JSON.parse(stdout.getText()) as { input: { model: string } }
     expect(parsed.input.model).toBe('mypreset')
@@ -147,12 +150,15 @@ describe('cli config precedence', () => {
 
     const stdout = captureStream()
 
-    await runCli(['--timeout', '2s', '--extract', '--format', 'text', '--json', 'https://example.com'], {
-      env: { HOME: tempRoot, SUMMARIZE_MODEL: 'openai/gpt-5.2' },
-      fetch: fetchMock as unknown as typeof fetch,
-      stdout: stdout.stream,
-      stderr: noopStream(),
-    })
+    await runCli(
+      ['--timeout', '2s', '--extract', '--format', 'text', '--json', 'https://example.com'],
+      {
+        env: { HOME: tempRoot, SUMMARIZE_MODEL: 'openai/gpt-5.2' },
+        fetch: fetchMock as unknown as typeof fetch,
+        stdout: stdout.stream,
+        stderr: noopStream(),
+      }
+    )
 
     const parsed = JSON.parse(stdout.getText()) as { input: { model: string } }
     expect(parsed.input.model).toBe('openai/gpt-5.2')

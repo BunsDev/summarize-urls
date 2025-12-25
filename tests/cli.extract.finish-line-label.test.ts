@@ -32,27 +32,17 @@ describe('cli --extract finish line label', () => {
       },
     })
 
-    await runCli(
-      [
-        '--extract',
-        '--metrics',
-        'on',
-        '--timeout',
-        '2s',
-        'https://example.com',
-      ],
-      {
-        env: { UVX_PATH: 'uvx' },
-        fetch: fetchMock as unknown as typeof fetch,
-        execFile: execFileMock as unknown as ExecFileFn,
-        stdout: new Writable({
-          write(_chunk, _encoding, callback) {
-            callback()
-          },
-        }),
-        stderr,
-      }
-    )
+    await runCli(['--extract', '--metrics', 'on', '--timeout', '2s', 'https://example.com'], {
+      env: { UVX_PATH: 'uvx' },
+      fetch: fetchMock as unknown as typeof fetch,
+      execFile: execFileMock as unknown as ExecFileFn,
+      stdout: new Writable({
+        write(_chunk, _encoding, callback) {
+          callback()
+        },
+      }),
+      stderr,
+    })
 
     const err = stderrChunks.join('')
     expect(err).toContain('markdown via readability')
@@ -85,27 +75,17 @@ describe('cli --extract finish line label', () => {
       },
     })
 
-    await runCli(
-      [
-        '--extract',
-        '--metrics',
-        'on',
-        '--timeout',
-        '2s',
-        'https://example.com',
-      ],
-      {
-        env: { OPENAI_API_KEY: 'test', UVX_PATH: 'uvx' },
-        fetch: fetchMock as unknown as typeof fetch,
-        execFile: execFileMock as unknown as ExecFileFn,
-        stdout: new Writable({
-          write(_chunk, _encoding, callback) {
-            callback()
-          },
-        }),
-        stderr,
-      }
-    )
+    await runCli(['--extract', '--metrics', 'on', '--timeout', '2s', 'https://example.com'], {
+      env: { OPENAI_API_KEY: 'test', UVX_PATH: 'uvx' },
+      fetch: fetchMock as unknown as typeof fetch,
+      execFile: execFileMock as unknown as ExecFileFn,
+      stdout: new Writable({
+        write(_chunk, _encoding, callback) {
+          callback()
+        },
+      }),
+      stderr,
+    })
 
     const err = stderrChunks.join('')
     expect(err).toContain('markdown via readability')

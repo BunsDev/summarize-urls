@@ -118,16 +118,19 @@ describe('--metrics detailed', () => {
       },
     })
 
-    await runCli(['--extract', '--format', 'text', '--metrics', 'detailed', '--timeout', '2s', url], {
-      env: { OPENAI_API_KEY: 'test' },
-      fetch: fetchMock as unknown as typeof fetch,
-      stdout: new Writable({
-        write(_chunk, _encoding, callback) {
-          callback()
-        },
-      }),
-      stderr,
-    })
+    await runCli(
+      ['--extract', '--format', 'text', '--metrics', 'detailed', '--timeout', '2s', url],
+      {
+        env: { OPENAI_API_KEY: 'test' },
+        fetch: fetchMock as unknown as typeof fetch,
+        stdout: new Writable({
+          write(_chunk, _encoding, callback) {
+            callback()
+          },
+        }),
+        stderr,
+      }
+    )
 
     expect(stderrText).toContain('$0.0060')
     expect(stderrText).toContain('txcost=$0.0060')

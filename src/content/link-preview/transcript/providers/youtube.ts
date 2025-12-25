@@ -55,7 +55,9 @@ export const fetchTranscript = async (
   }
 
   if (mode === 'yt-dlp' && !options.ytDlpPath) {
-    throw new Error('Missing yt-dlp binary for --youtube yt-dlp (set YT_DLP_PATH or install yt-dlp)')
+    throw new Error(
+      'Missing yt-dlp binary for --youtube yt-dlp (set YT_DLP_PATH or install yt-dlp)'
+    )
   }
   if (mode === 'yt-dlp' && !hasYtDlpCredentials) {
     throw new Error(

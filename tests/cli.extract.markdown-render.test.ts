@@ -21,13 +21,7 @@ describe('cli --extract markdown render', () => {
     cb(null, '# Title\n\n[A](https://example.com)\n', '')
   })
 
-  const runExtract = async ({
-    args,
-    tty,
-  }: {
-    args: string[]
-    tty: boolean
-  }): Promise<string> => {
+  const runExtract = async ({ args, tty }: { args: string[]; tty: boolean }): Promise<string> => {
     let stdoutText = ''
     const stdout = new Writable({
       write(chunk, _encoding, callback) {

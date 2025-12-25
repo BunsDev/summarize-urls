@@ -93,7 +93,16 @@ describe('--verbose', () => {
     })
 
     await runCli(
-      ['--json', '--verbose', '--extract', '--format', 'text', '--firecrawl', 'off', 'https://example.com'],
+      [
+        '--json',
+        '--verbose',
+        '--extract',
+        '--format',
+        'text',
+        '--firecrawl',
+        'off',
+        'https://example.com',
+      ],
       {
         env: { TERM: 'xterm-256color' },
         fetch: fetchMock as unknown as typeof fetch,

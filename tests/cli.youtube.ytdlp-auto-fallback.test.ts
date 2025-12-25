@@ -75,4 +75,3 @@ describe('cli YouTube auto transcript yt-dlp fallback', () => {
     expect(payload.extracted.content).toContain('hello from ytdlp')
   })
 })
-

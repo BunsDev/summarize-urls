@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('../src/content/link-preview/transcript/providers/youtube.js', () => ({
-  canHandle: (ctx: { url: string }) => ctx.url.includes('youtube.com') || ctx.url.includes('youtu.be'),
+  canHandle: (ctx: { url: string }) =>
+    ctx.url.includes('youtube.com') || ctx.url.includes('youtu.be'),
   fetchTranscript: mocks.fetchYoutube,
 }))
 
@@ -34,8 +35,12 @@ describe('transcript progress events', () => {
         onProgress,
       }
     )
-    expect(onProgress).not.toHaveBeenCalledWith(expect.objectContaining({ kind: 'transcript-start' }))
-    expect(onProgress).not.toHaveBeenCalledWith(expect.objectContaining({ kind: 'transcript-done' }))
+    expect(onProgress).not.toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'transcript-start' })
+    )
+    expect(onProgress).not.toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'transcript-done' })
+    )
   })
 
   it('emits transcript-start/done for YouTube URLs', async () => {
@@ -55,4 +60,3 @@ describe('transcript progress events', () => {
     expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({ kind: 'transcript-done' }))
   })
 })
-

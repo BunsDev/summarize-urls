@@ -40,15 +40,12 @@ describe('--extract warnings', () => {
     const stderr = collectStream()
     ;(stderr.stream as unknown as { isTTY?: boolean }).isTTY = true
 
-    await runCli(
-      ['--extract', '--timeout', '2s', '--length', 'short', 'https://example.com'],
-      {
-        env: { HOME: root },
-        fetch: fetchMock as unknown as typeof fetch,
-        stdout: stdout.stream,
-        stderr: stderr.stream,
-      }
-    )
+    await runCli(['--extract', '--timeout', '2s', '--length', 'short', 'https://example.com'], {
+      env: { HOME: root },
+      fetch: fetchMock as unknown as typeof fetch,
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+    })
 
     expect(stderr.getText()).toContain('--length is ignored with --extract')
   })
@@ -96,7 +93,17 @@ describe('--extract warnings', () => {
     ;(stderr.stream as unknown as { isTTY?: boolean }).isTTY = true
 
     await runCli(
-      ['--extract', '--json', '--metrics', 'off', '--timeout', '2s', '--length', 'short', 'https://example.com'],
+      [
+        '--extract',
+        '--json',
+        '--metrics',
+        'off',
+        '--timeout',
+        '2s',
+        '--length',
+        'short',
+        'https://example.com',
+      ],
       {
         env: { HOME: root },
         fetch: fetchMock as unknown as typeof fetch,
@@ -108,4 +115,3 @@ describe('--extract warnings', () => {
     expect(stderr.getText()).not.toContain('--length is ignored with --extract')
   })
 })
-

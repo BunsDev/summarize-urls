@@ -1632,7 +1632,7 @@ export async function runCli(
         ? 'md'
         : 'text'
   )
-  const firecrawlExplicitlySet = normalizedArgv.some(
+  const _firecrawlExplicitlySet = normalizedArgv.some(
     (arg) => arg === '--firecrawl' || arg.startsWith('--firecrawl=')
   )
   const markdownModeExplicitlySet = normalizedArgv.some(
@@ -1807,7 +1807,7 @@ export async function runCli(
     return (
       findLastModel('summary') ??
       findLastModel('markdown') ??
-      (llmCalls.length > 0 ? llmCalls[llmCalls.length - 1]?.model ?? null : null) ??
+      (llmCalls.length > 0 ? (llmCalls[llmCalls.length - 1]?.model ?? null) : null) ??
       fallback
     )
   }
@@ -2503,9 +2503,11 @@ export async function runCli(
 
     if (args.format === 'markdown') {
       const strategy = String(args.extracted.diagnostics.strategy ?? '')
-      const firecrawlUsed = strategy === 'firecrawl' || Boolean(args.extracted.diagnostics.firecrawl?.used)
+      const firecrawlUsed =
+        strategy === 'firecrawl' || Boolean(args.extracted.diagnostics.firecrawl?.used)
       if (firecrawlUsed) return `${base} via firecrawl`
-      if (strategy === 'html' && args.markdownMode === 'readability') return `${base} via readability`
+      if (strategy === 'html' && args.markdownMode === 'readability')
+        return `${base} via readability`
 
       const mdUsed = Boolean(args.extracted.diagnostics.markdown?.used)
       const mdProvider = args.extracted.diagnostics.markdown.provider

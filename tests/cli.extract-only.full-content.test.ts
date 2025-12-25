@@ -36,16 +36,25 @@ describe('cli --extract', () => {
     })
 
     await runCli(
-      ['--extract', '--format', 'md', '--firecrawl', 'always', '--timeout', '2s', 'https://example.com'],
+      [
+        '--extract',
+        '--format',
+        'md',
+        '--firecrawl',
+        'always',
+        '--timeout',
+        '2s',
+        'https://example.com',
+      ],
       {
-      env: { OPENAI_API_KEY: 'test', FIRECRAWL_API_KEY: 'test' },
-      fetch: fetchMock as unknown as typeof fetch,
-      stdout,
-      stderr: new Writable({
-        write(_chunk, _encoding, cb) {
-          cb()
-        },
-      }),
+        env: { OPENAI_API_KEY: 'test', FIRECRAWL_API_KEY: 'test' },
+        fetch: fetchMock as unknown as typeof fetch,
+        stdout,
+        stderr: new Writable({
+          write(_chunk, _encoding, cb) {
+            cb()
+          },
+        }),
       }
     )
 

@@ -41,16 +41,19 @@ describe('cli --json', () => {
         },
       })
 
-      await runCli(['--json', '--extract', '--format', 'text', '--timeout', '2s', 'https://example.com'], {
-        env: { HOME: home },
-        fetch: fetchMock as unknown as typeof fetch,
-        stdout,
-        stderr: new Writable({
-          write(_chunk, _encoding, callback) {
-            callback()
-          },
-        }),
-      })
+      await runCli(
+        ['--json', '--extract', '--format', 'text', '--timeout', '2s', 'https://example.com'],
+        {
+          env: { HOME: home },
+          fetch: fetchMock as unknown as typeof fetch,
+          stdout,
+          stderr: new Writable({
+            write(_chunk, _encoding, callback) {
+              callback()
+            },
+          }),
+        }
+      )
 
       expect(globalObject.AI_SDK_LOG_WARNINGS).toBe(false)
       expect(() => JSON.parse(stdoutText)).not.toThrow()
@@ -88,12 +91,15 @@ describe('cli --json', () => {
       },
     })
 
-    await runCli(['--json', '--extract', '--format', 'text', '--timeout', '2s', 'https://example.com'], {
-      env: { HOME: home },
-      fetch: fetchMock as unknown as typeof fetch,
-      stdout,
-      stderr,
-    })
+    await runCli(
+      ['--json', '--extract', '--format', 'text', '--timeout', '2s', 'https://example.com'],
+      {
+        env: { HOME: home },
+        fetch: fetchMock as unknown as typeof fetch,
+        stdout,
+        stderr,
+      }
+    )
 
     expect(stderrText).toContain('· text')
     const parsed = JSON.parse(stdoutText) as {

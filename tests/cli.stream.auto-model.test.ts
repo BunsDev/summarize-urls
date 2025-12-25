@@ -119,4 +119,3 @@ describe('cli streaming with auto model selection', () => {
     globalFetchSpy.mockRestore()
   })
 })
-
