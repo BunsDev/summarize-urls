@@ -4,6 +4,7 @@
 
 ### Changes
 
+- YouTube: `--youtube auto` now falls back to `yt-dlp` if it’s on `PATH` (or `YT_DLP_PATH` is set) and a Whisper provider is available.
 - `--version` now includes a short git SHA when available (build provenance).
 - `--extract` now defaults to Markdown output (when `--format` is omitted), preferring Readability input.
 - `--extract` no longer spends LLM tokens for Markdown conversion by default (unless `--markdown-mode llm` is used).
@@ -12,7 +13,6 @@
 - Finish line always includes the model id when an LLM is used (including `--extract --markdown-mode llm`).
 - `--extract` renders Markdown in TTY output (same renderer as summaries) when `--render auto|md` (use `--render plain` for raw Markdown).
 - Suppress transcript progress/failure messages for non-YouTube / non-podcast URLs.
-- YouTube: `--youtube auto` now falls back to `yt-dlp` if it’s on `PATH` (or `YT_DLP_PATH` is set) and a Whisper provider is available.
 
 ## 0.6.0 - 2025-12-25
 
