@@ -59,7 +59,7 @@ describe('cli streamed markdown write semantics', () => {
     streamTextMock.mockClear()
     createOpenAIMock.mockClear()
 
-    const root = mkdtempSync(join(tmpdir(), 'summarize-md-stream-lines-'))
+    const root = mkdtempSync(join(tmpdir(), 'summarize-stream-lines-'))
     const cacheDir = join(root, '.summarize', 'cache')
     mkdirSync(cacheDir, { recursive: true })
 

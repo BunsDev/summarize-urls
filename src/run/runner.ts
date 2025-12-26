@@ -283,7 +283,9 @@ export async function runCli(
     throw new Error('--extract is only supported for website/YouTube URLs')
   }
 
-  const progressEnabled = isRichTty(stderr) && !verbose && !json
+  // Scrollback-safe streaming: avoid any cursor-control output (spinners, OSC, clears),
+  // otherwise the terminal prompt/input can get corrupted (typed commands appearing inside output).
+  const progressEnabled = isRichTty(stderr) && !verbose && !json && !streamingEnabled
   const progressGate = createProgressGate()
   const { clearProgressForStdout, setClearProgressBeforeStdout, clearProgressIfCurrent } =
     progressGate

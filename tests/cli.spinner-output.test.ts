@@ -129,11 +129,11 @@ describe('cli spinner output', () => {
     buf.write('%PDF-1.7\n', 0, 'utf8')
     writeFileSync(pdfPath, buf)
 
-    const stdout = collectStream({ isTTY: true })
+    const stdout = collectStream({ isTTY: false })
     const stderr = collectStream({ isTTY: true })
 
     await expect(
-      runCli(['--model', 'xai/grok-4-fast-non-reasoning', '--timeout', '2s', pdfPath], {
+      runCli(['--stream', 'off', '--model', 'xai/grok-4-fast-non-reasoning', '--timeout', '2s', pdfPath], {
         env: { HOME: root, XAI_API_KEY: 'test', TERM: 'xterm-256color' },
         fetch: vi.fn(async () => {
           throw new Error('unexpected fetch')
@@ -155,7 +155,7 @@ describe('cli spinner output', () => {
 
   it('clears the "Fetching website" spinner line (no scrollback junk)', async () => {
     const root = mkdtempSync(join(tmpdir(), 'summarize-spinner-web-'))
-    const stdout = collectStream({ isTTY: true })
+    const stdout = collectStream({ isTTY: false })
     const stderr = collectStream({ isTTY: true })
 
     await runCli(['--extract', '--format', 'text', '--timeout', '2s', 'https://example.com'], {
@@ -185,7 +185,7 @@ describe('cli spinner output', () => {
     const stdout = collectStream({ isTTY: true })
     const stderr = collectStream({ isTTY: true })
 
-    await runCli(['--timeout', '2s', 'https://example.com'], {
+    await runCli(['--stream', 'off', '--timeout', '2s', 'https://example.com'], {
       env: { HOME: root, TERM_PROGRAM: 'wezterm', TERM: 'xterm-256color' },
       fetch: vi.fn(async () => {
         return new Response('<html><body><h1>Example</h1></body></html>', {

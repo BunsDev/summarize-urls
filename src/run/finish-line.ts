@@ -203,6 +203,23 @@ export function writeFinishLine({
   const compactTranscriptLabel = compactTranscript?.startsWith('txc=')
     ? compactTranscript.slice('txc='.length)
     : null
+
+  const stripWordPrefix = (input: string): string | null => {
+    // Examples:
+    // - "2.9k words" => null
+    // - "2.9k words via firecrawl" => "via firecrawl"
+    const match = input.match(
+      /^~?\d[\d.]*[kmb]?\s+words(?:\s+via\s+(.+))?$/i
+    )
+    if (!match) return input
+    const via = match[1]?.trim()
+    return via ? `via ${via}` : null
+  }
+
+  const effectiveLabel =
+    compactTranscriptLabel && compactTranscriptLabel.toLowerCase().includes('words') && label
+      ? stripWordPrefix(label)
+      : label ?? null
   const filteredExtraParts =
     compactTranscriptLabel && extraParts
       ? extraParts.filter((part) => part !== compactTranscript)
@@ -211,7 +228,7 @@ export function writeFinishLine({
     formatElapsedMs(elapsedMs),
     compactTranscriptLabel,
     costUsd != null ? formatUSD(costUsd) : null,
-    label ?? null,
+    effectiveLabel,
     model ? formatModelLabelForDisplay(model) : null,
     tokensPart,
   ]

@@ -56,7 +56,7 @@ vi.mock('@ai-sdk/openai', () => ({
 
 describe('cli streamed markdown rendering', () => {
   it('streams rendered markdown (append-only) when stdout is a TTY', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'summarize-md-live-'))
+    const root = mkdtempSync(join(tmpdir(), 'summarize-stream-md-'))
     const cacheDir = join(root, '.summarize', 'cache')
     mkdirSync(cacheDir, { recursive: true })
 
@@ -133,7 +133,7 @@ describe('cli streamed markdown rendering', () => {
       }
     })
 
-    const root = mkdtempSync(join(tmpdir(), 'summarize-md-live-'))
+    const root = mkdtempSync(join(tmpdir(), 'summarize-stream-md-'))
     const cacheDir = join(root, '.summarize', 'cache')
     mkdirSync(cacheDir, { recursive: true })
 
