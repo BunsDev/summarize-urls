@@ -412,7 +412,11 @@ export async function summarizeAsset(ctx: AssetSummaryContext, args: SummarizeAs
           })
         : summary
 
-    ctx.stdout.write(rendered)
+    if (!ctx.plain && isRichTty(ctx.stdout)) {
+      ctx.stdout.write(`\n${rendered.replace(/^\n+/, '')}`)
+    } else {
+      ctx.stdout.write(rendered)
+    }
     if (!rendered.endsWith('\n')) {
       ctx.stdout.write('\n')
     }

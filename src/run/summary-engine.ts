@@ -373,6 +373,7 @@ export function createSummaryEngine(deps: SummaryEngineDeps) {
 	      let plainFlushedLen = 0
 	      let streamedRaw = ''
 	      const liveWidth = markdownRenderWidth(deps.stdout, deps.env)
+        let wroteLeadingBlankLine = false
 
       const streamer = shouldStreamRenderedMarkdownToStdout
         ? createMarkdownStreamer({
@@ -413,7 +414,12 @@ export function createSummaryEngine(deps: SummaryEngineDeps) {
             const out = streamer.push(merged.appended)
             if (out) {
               deps.clearProgressForStdout()
-              deps.stdout.write(out)
+              if (!wroteLeadingBlankLine) {
+                deps.stdout.write(`\n${out.replace(/^\n+/, '')}`)
+                wroteLeadingBlankLine = true
+              } else {
+                deps.stdout.write(out)
+              }
             }
           }
 	        }
@@ -426,7 +432,12 @@ export function createSummaryEngine(deps: SummaryEngineDeps) {
             const out = streamer?.finish()
             if (out) {
               deps.clearProgressForStdout()
-              deps.stdout.write(out)
+              if (!wroteLeadingBlankLine) {
+                deps.stdout.write(`\n${out.replace(/^\n+/, '')}`)
+                wroteLeadingBlankLine = true
+              } else {
+                deps.stdout.write(out)
+              }
             }
           summaryAlreadyPrinted = true
         }

@@ -116,7 +116,7 @@ describe('cli streamed markdown write semantics', () => {
       )
 
       expect(stdout.chunks).toHaveLength(1)
-      expect(stdout.chunks[0]).toBe('Hello world\n')
+      expect(stdout.chunks[0]).toBe('\nHello world\n')
     } finally {
       globalFetchSpy.mockRestore()
     }

@@ -173,7 +173,11 @@ export async function outputExtractedUrl({
         })
       : extracted.content
 
-  ctx.stdout.write(renderedExtract)
+  if (ctx.format === 'markdown' && !ctx.plain && isRichTty(ctx.stdout)) {
+    ctx.stdout.write(`\n${renderedExtract.replace(/^\n+/, '')}`)
+  } else {
+    ctx.stdout.write(renderedExtract)
+  }
   if (!renderedExtract.endsWith('\n')) {
     ctx.stdout.write('\n')
   }
@@ -501,7 +505,11 @@ export async function summarizeExtractedUrl({
           })
         : summary
 
-    ctx.stdout.write(rendered)
+    if (!ctx.plain && isRichTty(ctx.stdout)) {
+      ctx.stdout.write(`\n${rendered.replace(/^\n+/, '')}`)
+    } else {
+      ctx.stdout.write(rendered)
+    }
     if (!rendered.endsWith('\n')) {
       ctx.stdout.write('\n')
     }
