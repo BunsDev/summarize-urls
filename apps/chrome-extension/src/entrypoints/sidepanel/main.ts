@@ -1,5 +1,6 @@
 import MarkdownIt from 'markdown-it'
 
+import { buildIdleSubtitle } from '../../lib/header'
 import { loadSettings, patchSettings } from '../../lib/settings'
 import { parseSseStream } from '../../lib/sse'
 import { splitStatusPercent } from '../../lib/status'
@@ -44,6 +45,7 @@ function byId<T extends HTMLElement>(id: string): T {
 }
 
 const subtitleEl = byId<HTMLDivElement>('subtitle')
+const titleEl = byId<HTMLDivElement>('title')
 const headerEl = document.querySelector('header') as HTMLElement
 if (!headerEl) throw new Error('Missing <header>')
 const progressFillEl = byId<HTMLDivElement>('progressFill')
@@ -74,8 +76,14 @@ let streamController: AbortController | null = null
 let streamedAnyNonWhitespace = false
 let rememberedUrl = false
 let streaming = false
+let baseTitle = 'Summarize'
 let baseSubtitle = ''
 let statusText = ''
+let lastMeta: { inputSummary: string | null; model: string | null; modelLabel: string | null } = {
+  inputSummary: null,
+  model: null,
+  modelLabel: null,
+}
 
 function ensureSelectValue(select: HTMLSelectElement, value: unknown): string {
   const normalized = typeof value === 'string' ? value.trim() : ''
@@ -104,6 +112,12 @@ function setBaseSubtitle(text: string) {
   updateHeader()
 }
 
+function setBaseTitle(text: string) {
+  const next = text.trim() || 'Summarize'
+  baseTitle = next
+  updateHeader()
+}
+
 function setStatus(text: string) {
   statusText = text
   updateHeader()
@@ -120,6 +134,7 @@ function updateHeader() {
     showStatus &&
     (trimmed.toLowerCase().startsWith('error:') || trimmed.toLowerCase().includes(' error'))
 
+  titleEl.textContent = baseTitle
   headerEl.classList.toggle('isError', isError)
   headerEl.classList.toggle('isRunning', showStatus && !isError)
   headerEl.classList.toggle('isIndeterminate', showStatus && !isError && percentNum == null)
@@ -292,7 +307,11 @@ function updateControls(state: UiState) {
   if (currentSource && state.tab.url && state.tab.url !== currentSource.url && !streaming) {
     currentSource = null
   }
-  if (!currentSource) setBaseSubtitle(state.tab.title || state.tab.url || '')
+  if (!currentSource) {
+    lastMeta = { inputSummary: null, model: null, modelLabel: null }
+    setBaseTitle(state.tab.title || state.tab.url || 'Summarize')
+    setBaseSubtitle('')
+  }
   setStatus(state.status)
   maybeShowSetup(state)
 }
@@ -393,7 +412,9 @@ async function startStream(run: RunStart) {
   metricsEl.classList.add('hidden')
   metricsEl.removeAttribute('data-details')
   metricsEl.removeAttribute('title')
-  setBaseSubtitle(run.title || run.url)
+  lastMeta = { inputSummary: null, model: null, modelLabel: null }
+  setBaseTitle(run.title || run.url)
+  setBaseSubtitle('')
   setStatus('Connecting…')
 
   try {
@@ -425,9 +446,24 @@ async function startStream(run: RunStart) {
           }
         }
       } else if (msg.event === 'meta') {
-        const data = JSON.parse(msg.data) as { model: string }
-        const title = currentSource?.title || currentState?.tab.title || 'Current tab'
-        setBaseSubtitle(`${title} · ${data.model}`)
+        const data = JSON.parse(msg.data) as {
+          model?: string | null
+          modelLabel?: string | null
+          inputSummary?: string | null
+        }
+        lastMeta = {
+          model: typeof data.model === 'string' ? data.model : lastMeta.model,
+          modelLabel: typeof data.modelLabel === 'string' ? data.modelLabel : lastMeta.modelLabel,
+          inputSummary:
+            typeof data.inputSummary === 'string' ? data.inputSummary : lastMeta.inputSummary,
+        }
+        setBaseSubtitle(
+          buildIdleSubtitle({
+            inputSummary: lastMeta.inputSummary,
+            modelLabel: lastMeta.modelLabel,
+            model: lastMeta.model,
+          })
+        )
       } else if (msg.event === 'status') {
         const data = JSON.parse(msg.data) as { text: string }
         if (!streamedAnyNonWhitespace) setStatus(data.text)
