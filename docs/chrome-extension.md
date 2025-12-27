@@ -28,8 +28,9 @@ Dev (repo checkout):
 
 - **Extension (MV3, WXT)**
   - Side Panel UI: typography controls (font family + size), model selector, auto/manual toggle.
-  - Background service worker: tab + navigation tracking, talks to daemon, streams to panel.
+  - Background service worker: tab + navigation tracking, content extraction, starts summarize runs.
   - Content script: extract readable article text from the **rendered DOM** via Readability; also detect SPA URL changes.
+  - Panel page streams SSE directly (MV3 service workers can be flaky for long-lived streams).
 - **Daemon (local, LaunchAgent)**
   - HTTP server on `127.0.0.1:8787` only.
   - Token-authenticated API.
@@ -41,7 +42,7 @@ Dev (repo checkout):
 2) Background notices panel connected.
 3) On nav/tab change (and auto enabled): background asks content script to extract `{ url, title, text }`.
 4) Background `POST`s payload to daemon `/v1/summarize` with `Authorization: Bearer <token>`.
-5) Background opens `/v1/summarize/<id>/events` (SSE), forwards `chunk`/`meta`/`done` to the panel, and the panel renders streamed Markdown.
+5) Panel opens `/v1/summarize/<id>/events` (SSE) and renders streamed Markdown.
 
 ## SPA Navigation
 
