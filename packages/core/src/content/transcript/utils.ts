@@ -1,74 +1,14 @@
 import { load } from 'cheerio'
 
+import { extractYouTubeVideoId } from '../url.js'
+
+export { extractYouTubeVideoId, isYouTubeUrl, isYouTubeVideoUrl } from '../url.js'
+
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
-
-export const isYouTubeUrl = (rawUrl: string): boolean => {
-  try {
-    const hostname = new URL(rawUrl).hostname.toLowerCase()
-    return hostname.includes('youtube.com') || hostname.includes('youtu.be')
-  } catch {
-    const lower = rawUrl.toLowerCase()
-    return lower.includes('youtube.com') || lower.includes('youtu.be')
-  }
-}
-
-const YOUTUBE_VIDEO_ID_PATTERN = /^[a-zA-Z0-9_-]{11}$/
 const MAX_EMBED_YOUTUBE_TEXT_CHARS = 2000
 const MAX_EMBED_YOUTUBE_READABILITY_CHARS = 2000
-
-export function isYouTubeVideoUrl(rawUrl: string): boolean {
-  try {
-    const url = new URL(rawUrl)
-    const hostname = url.hostname.toLowerCase()
-    if (hostname === 'youtu.be') {
-      return true
-    }
-    if (hostname.includes('youtube.com')) {
-      return (
-        url.pathname.startsWith('/watch') ||
-        url.pathname.startsWith('/shorts/') ||
-        url.pathname.startsWith('/embed/') ||
-        url.pathname.startsWith('/v/')
-      )
-    }
-  } catch {
-    return false
-  }
-  return false
-}
-
-export function extractYouTubeVideoId(rawUrl: string): string | null {
-  try {
-    const url = new URL(rawUrl)
-    const hostname = url.hostname.toLowerCase()
-    let candidate: string | null = null
-    if (hostname === 'youtu.be') {
-      candidate = url.pathname.split('/')[1] ?? null
-    }
-    if (hostname.includes('youtube.com')) {
-      if (url.pathname.startsWith('/watch')) {
-        candidate = url.searchParams.get('v')
-      } else if (url.pathname.startsWith('/shorts/')) {
-        candidate = url.pathname.split('/')[2] ?? null
-      } else if (url.pathname.startsWith('/embed/')) {
-        candidate = url.pathname.split('/')[2] ?? null
-      } else if (url.pathname.startsWith('/v/')) {
-        candidate = url.pathname.split('/')[2] ?? null
-      }
-    }
-
-    const trimmed = candidate?.trim() ?? ''
-    if (!trimmed) {
-      return null
-    }
-    return YOUTUBE_VIDEO_ID_PATTERN.test(trimmed) ? trimmed : null
-  } catch {
-    // Ignore parsing errors for malformed URLs
-  }
-  return null
-}
 
 async function extractReadabilityText(html: string): Promise<string> {
   try {

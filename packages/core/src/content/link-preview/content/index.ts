@@ -1,5 +1,5 @@
 import { resolveTranscriptForLink } from '../../transcript/index.js'
-import { isYouTubeUrl } from '../../transcript/utils.js'
+import { isYouTubeUrl } from '../../url.js'
 import type { FirecrawlScrapeResult, LinkPreviewDeps } from '../deps.js'
 import type { FirecrawlDiagnostics } from '../types.js'
 import { normalizeForPrompt } from './cleaner.js'

@@ -26,3 +26,12 @@ export {
   type CacheStatus,
   type TranscriptSource,
 } from './link-preview/types.js'
+export {
+  extractYouTubeVideoId,
+  isDirectMediaUrl,
+  isPodcastHost,
+  isTwitterStatusUrl,
+  isYouTubeUrl,
+  isYouTubeVideoUrl,
+  shouldPreferUrlMode,
+} from './url.js'

@@ -1,4 +1,4 @@
-import { isYouTubeUrl } from '../../transcript/utils.js'
+import { isYouTubeUrl } from '../../url.js'
 import type {
   FirecrawlScrapeResult,
   LinkPreviewProgressEvent,

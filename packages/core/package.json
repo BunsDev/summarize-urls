@@ -15,6 +15,10 @@
       "types": "./dist/types/content/index.d.ts",
       "import": "./dist/esm/content/index.js"
     },
+    "./content/url": {
+      "types": "./dist/types/content/url.d.ts",
+      "import": "./dist/esm/content/url.js"
+    },
     "./prompts": {
       "types": "./dist/types/prompts/index.d.ts",
       "import": "./dist/esm/prompts/index.js"

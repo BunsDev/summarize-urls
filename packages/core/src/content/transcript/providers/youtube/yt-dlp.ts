@@ -191,10 +191,7 @@ async function downloadAudio(
     let progressBuffer = ''
     let lastTotalBytes: number | null = null
 
-    const reportProgress = (
-      downloadedBytes: number,
-      totalBytes: number | null
-    ): void => {
+    const reportProgress = (downloadedBytes: number, totalBytes: number | null): void => {
       if (!onProgress) return
       let normalizedTotal = totalBytes
       if (typeof normalizedTotal === 'number' && Number.isFinite(normalizedTotal)) {
