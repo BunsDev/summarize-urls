@@ -20,6 +20,7 @@
 - Core: expose lightweight URL helpers at `@steipete/summarize-core/content/url` (YouTube/Twitter/podcast/direct-media detection).
 - X/Twitter: auto-transcribe tweet videos via `yt-dlp`, using browser cookies (Chrome → Safari → Firefox) when available; set `TWITTER_COOKIE_SOURCE` / `TWITTER_*_PROFILE` to control cookie extraction order.
 - Config: add `prompt` to replace the default summary instructions (same behavior as `--prompt`).
+- Cache: add SQLite cache for transcripts/extractions/summaries with `--no-cache` / `--clear-cache` + config.
 - Daemon/Chrome: stream extra run metadata (`inputSummary`, `modelLabel`) over SSE so the panel can show input size + model without cluttering the summary.
 
 ### Fixed
