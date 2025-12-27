@@ -48,6 +48,7 @@ const drawerEl = byId<HTMLElement>('drawer')
 const setupEl = byId<HTMLDivElement>('setup')
 const statusEl = byId<HTMLDivElement>('status')
 const renderEl = byId<HTMLElement>('render')
+const metricsEl = byId<HTMLDivElement>('metrics')
 
 const summarizeBtn = byId<HTMLButtonElement>('summarize')
 const drawerToggleBtn = byId<HTMLButtonElement>('drawerToggle')
@@ -74,7 +75,12 @@ let streaming = false
 
 function ensureSelectValue(select: HTMLSelectElement, value: string): string {
   const normalized = value.trim()
-  if (!normalized) return select.options[0]?.value ?? ''
+  if (!normalized) {
+    const fallback = select.options[0]?.value ?? ''
+    if (fallback) select.value = fallback
+    if (select.selectedIndex === -1 && select.options.length > 0) select.selectedIndex = 0
+    return fallback
+  }
 
   if (!Array.from(select.options).some((o) => o.value === normalized)) {
     const label = normalized.split(',')[0]?.replace(/["']/g, '').trim() || 'Custom'
@@ -84,6 +90,8 @@ function ensureSelectValue(select: HTMLSelectElement, value: string): string {
     select.append(option)
   }
 
+  select.value = normalized
+  if (select.selectedIndex === -1 && select.options.length > 0) select.selectedIndex = 0
   return normalized
 }
 
@@ -133,7 +141,7 @@ function applyTypography(fontFamily: string, fontSize: number) {
 function friendlyFetchError(err: unknown, context: string): string {
   const message = err instanceof Error ? err.message : String(err)
   if (message.toLowerCase() === 'failed to fetch') {
-    return `${context}: Failed to fetch (daemon unreachable or blocked by Chrome; try \`summarize daemon status\` and check ~/.summarize/logs/daemon.err.log)`
+    return `${context}: Failed to fetch (daemon unreachable or blocked by Chrome; try \`summarize daemon status\`, maybe \`summarize daemon restart\`, and check ~/.summarize/logs/daemon.err.log)`
   }
   return `${context}: ${message}`
 }
@@ -197,6 +205,7 @@ function maybeShowSetup(state: UiState) {
         <div class="row">
           <button id="copy" type="button">Copy Install Command</button>
           <button id="status" type="button">Copy Status Command</button>
+          <button id="restart" type="button">Copy Restart Command</button>
         </div>
       `
       setupEl.querySelector<HTMLButtonElement>('#copy')?.addEventListener('click', () => {
@@ -207,6 +216,11 @@ function maybeShowSetup(state: UiState) {
       setupEl.querySelector<HTMLButtonElement>('#status')?.addEventListener('click', () => {
         void (async () => {
           await navigator.clipboard.writeText('summarize daemon status')
+        })()
+      })
+      setupEl.querySelector<HTMLButtonElement>('#restart')?.addEventListener('click', () => {
+        void (async () => {
+          await navigator.clipboard.writeText('summarize daemon restart')
         })()
       })
     })
@@ -250,14 +264,20 @@ function handleBgMessage(msg: BgToPanel) {
 }
 
 function send(message: PanelToBg) {
-  if (!port) {
-    queueMessage(message)
-    scheduleReconnect()
-    return
-  }
   try {
+    if (!port) {
+      queueMessage(message)
+      scheduleReconnect()
+      return
+    }
     port.postMessage(message)
   } catch {
+    try {
+      port?.disconnect()
+    } catch {
+      // ignore
+    }
+    port = null
     queueMessage(message)
     scheduleReconnect()
   }
@@ -351,7 +371,7 @@ sizeEl.addEventListener('input', () => {
 
 void (async () => {
   const s = await loadSettings()
-  fontEl.value = ensureSelectValue(fontEl, s.fontFamily)
+  ensureSelectValue(fontEl, s.fontFamily)
   sizeEl.value = String(s.fontSize)
   modelEl.value = s.model
   autoEl.checked = s.autoSummarize
@@ -382,6 +402,10 @@ async function startStream(run: RunStart) {
 
   markdown = ''
   renderEl.innerHTML = ''
+  metricsEl.textContent = ''
+  metricsEl.classList.add('hidden')
+  metricsEl.removeAttribute('data-details')
+  metricsEl.removeAttribute('title')
   subtitleEl.textContent = run.title || run.url
   setStatus('Connecting…')
 
@@ -393,7 +417,7 @@ async function startStream(run: RunStart) {
     if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
     if (!res.body) throw new Error('Missing stream body')
 
-    setStatus('Streaming…')
+    setStatus('Summarizing…')
 
     for await (const msg of parseSseStream(res.body)) {
       if (controller.signal.aborted) return
@@ -405,7 +429,6 @@ async function startStream(run: RunStart) {
 
         if (!streamedAnyNonWhitespace && data.text.trim().length > 0) {
           streamedAnyNonWhitespace = true
-          setStatus('')
           if (!rememberedUrl) {
             rememberedUrl = true
             send({ type: 'panel:rememberUrl', url: run.url })
@@ -415,6 +438,24 @@ async function startStream(run: RunStart) {
         const data = JSON.parse(msg.data) as { model: string }
         const title = currentSource?.title || currentState?.tab.title || 'Current tab'
         subtitleEl.textContent = `${title} · ${data.model}`
+      } else if (msg.event === 'metrics') {
+        const data = JSON.parse(msg.data) as {
+          summary: string
+          details: string | null
+          summaryDetailed: string
+          detailsDetailed: string | null
+          elapsedMs: number
+        }
+        metricsEl.textContent = data.summary
+        const tooltipParts = [data.summaryDetailed, data.detailsDetailed, data.details]
+          .filter((p): p is string => typeof p === 'string' && p.trim().length > 0)
+          .slice(0, 2)
+        const tooltip = tooltipParts.join('\n')
+        if (tooltip) {
+          metricsEl.setAttribute('title', tooltip)
+          metricsEl.setAttribute('data-details', '1')
+        }
+        metricsEl.classList.remove('hidden')
       } else if (msg.event === 'error') {
         const data = JSON.parse(msg.data) as { message: string }
         throw new Error(data.message)

@@ -91,6 +91,7 @@ Problem: daemon must be secured; extension must discover and pair with it.
 - `GET /v1/summarize/:id/events` (SSE)
   - `event: chunk` `data: { text }`
   - `event: meta` `data: { model }`
+  - `event: metrics` `data: { elapsedMs, summary, details, summaryDetailed, detailsDetailed }`
   - `event: done` `data: {}`
   - `event: error` `data: { message }`
 

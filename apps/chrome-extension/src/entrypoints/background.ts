@@ -164,7 +164,13 @@ export default defineBackground(() => {
   let runController: AbortController | null = null
   let lastNavAt = 0
 
-  const send = (msg: BgToPanel) => panelPort?.postMessage(msg)
+  const send = (msg: BgToPanel) => {
+    try {
+      panelPort?.postMessage(msg)
+    } catch {
+      // ignore (panel likely reloading / port disconnected)
+    }
+  }
   const sendStatus = (status: string) => send({ type: 'ui:status', status })
 
   const emitState = async (status: string) => {
