@@ -35,8 +35,8 @@ describe('daemon/flow-context (overrides)', () => {
       stdoutSink: { writeChunk: () => {} },
     })
 
-    expect(ctx.lengthArg).toEqual({ kind: 'preset', preset: 'xl' })
-    expect(ctx.outputLanguage).toEqual({ kind: 'auto' })
+    expect(ctx.flags.lengthArg).toEqual({ kind: 'preset', preset: 'xl' })
+    expect(ctx.flags.outputLanguage).toEqual({ kind: 'auto' })
   })
 
   it('accepts custom length and language overrides', () => {
@@ -54,9 +54,9 @@ describe('daemon/flow-context (overrides)', () => {
       stdoutSink: { writeChunk: () => {} },
     })
 
-    expect(ctx.lengthArg).toEqual({ kind: 'chars', maxCharacters: 20000 })
-    expect(ctx.outputLanguage.kind).toBe('fixed')
-    expect(ctx.outputLanguage.kind === 'fixed' ? ctx.outputLanguage.tag : null).toBe('de')
+    expect(ctx.flags.lengthArg).toEqual({ kind: 'chars', maxCharacters: 20000 })
+    expect(ctx.flags.outputLanguage.kind).toBe('fixed')
+    expect(ctx.flags.outputLanguage.kind === 'fixed' ? ctx.flags.outputLanguage.tag : null).toBe('de')
   })
 
   it('adjusts desired output tokens based on length', () => {
@@ -86,8 +86,8 @@ describe('daemon/flow-context (overrides)', () => {
       stdoutSink: { writeChunk: () => {} },
     })
 
-    const shortTokens = shortCtx.desiredOutputTokens
-    const xlTokens = xlCtx.desiredOutputTokens
+    const shortTokens = shortCtx.model.desiredOutputTokens
+    const xlTokens = xlCtx.model.desiredOutputTokens
     if (typeof shortTokens !== 'number' || typeof xlTokens !== 'number') {
       throw new Error('expected desiredOutputTokens to be a number')
     }

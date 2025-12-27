@@ -43,101 +43,103 @@ export async function runUrlFlow({
     throw new Error('Only HTTP and HTTPS URLs can be summarized')
   }
 
+  const { io, flags, model, cache: cacheState, hooks } = ctx
+
   const markdown = createMarkdownConverters(ctx, { isYoutubeUrl })
-  if (ctx.firecrawlMode === 'always' && !ctx.apiStatus.firecrawlConfigured) {
+  if (flags.firecrawlMode === 'always' && !model.apiStatus.firecrawlConfigured) {
     throw new Error('--firecrawl always requires FIRECRAWL_API_KEY')
   }
 
   writeVerbose(
-    ctx.stderr,
-    ctx.verbose,
-    `config url=${url} timeoutMs=${ctx.timeoutMs} youtube=${ctx.youtubeMode} firecrawl=${ctx.firecrawlMode} length=${
-      ctx.lengthArg.kind === 'preset'
-        ? ctx.lengthArg.preset
-        : `${ctx.lengthArg.maxCharacters} chars`
-    } maxOutputTokens=${formatOptionalNumber(ctx.maxOutputTokensArg)} retries=${ctx.retries} json=${ctx.json} extract=${ctx.extractMode} format=${ctx.format} preprocess=${ctx.preprocessMode} markdownMode=${ctx.markdownMode} model=${ctx.requestedModelLabel} videoMode=${ctx.videoMode} stream=${ctx.streamingEnabled ? 'on' : 'off'} plain=${ctx.plain}`,
-    ctx.verboseColor
+    io.stderr,
+    flags.verbose,
+    `config url=${url} timeoutMs=${flags.timeoutMs} youtube=${flags.youtubeMode} firecrawl=${flags.firecrawlMode} length=${
+      flags.lengthArg.kind === 'preset'
+        ? flags.lengthArg.preset
+        : `${flags.lengthArg.maxCharacters} chars`
+    } maxOutputTokens=${formatOptionalNumber(flags.maxOutputTokensArg)} retries=${flags.retries} json=${flags.json} extract=${flags.extractMode} format=${flags.format} preprocess=${flags.preprocessMode} markdownMode=${flags.markdownMode} model=${model.requestedModelLabel} videoMode=${flags.videoMode} stream=${flags.streamingEnabled ? 'on' : 'off'} plain=${flags.plain}`,
+    flags.verboseColor
   )
   writeVerbose(
-    ctx.stderr,
-    ctx.verbose,
-    `configFile path=${formatOptionalString(ctx.configPath)} model=${formatOptionalString(
-      ctx.configModelLabel
+    io.stderr,
+    flags.verbose,
+    `configFile path=${formatOptionalString(flags.configPath)} model=${formatOptionalString(
+      flags.configModelLabel
     )}`,
-    ctx.verboseColor
+    flags.verboseColor
   )
   writeVerbose(
-    ctx.stderr,
-    ctx.verbose,
-    `env xaiKey=${Boolean(ctx.apiStatus.xaiApiKey)} openaiKey=${Boolean(ctx.apiStatus.apiKey)} zaiKey=${Boolean(ctx.apiStatus.zaiApiKey)} googleKey=${ctx.apiStatus.googleConfigured} anthropicKey=${ctx.apiStatus.anthropicConfigured} openrouterKey=${ctx.apiStatus.openrouterConfigured} apifyToken=${Boolean(ctx.apiStatus.apifyToken)} firecrawlKey=${ctx.apiStatus.firecrawlConfigured}`,
-    ctx.verboseColor
+    io.stderr,
+    flags.verbose,
+    `env xaiKey=${Boolean(model.apiStatus.xaiApiKey)} openaiKey=${Boolean(model.apiStatus.apiKey)} zaiKey=${Boolean(model.apiStatus.zaiApiKey)} googleKey=${model.apiStatus.googleConfigured} anthropicKey=${model.apiStatus.anthropicConfigured} openrouterKey=${model.apiStatus.openrouterConfigured} apifyToken=${Boolean(model.apiStatus.apifyToken)} firecrawlKey=${model.apiStatus.firecrawlConfigured}`,
+    flags.verboseColor
   )
   writeVerbose(
-    ctx.stderr,
-    ctx.verbose,
+    io.stderr,
+    flags.verbose,
     `markdown requested=${markdown.markdownRequested} provider=${markdown.markdownProvider}`,
-    ctx.verboseColor
+    flags.verboseColor
   )
 
-  const firecrawlApiKey = ctx.apiStatus.firecrawlApiKey
+  const firecrawlApiKey = model.apiStatus.firecrawlApiKey
   const scrapeWithFirecrawl =
-    ctx.apiStatus.firecrawlConfigured && ctx.firecrawlMode !== 'off' && firecrawlApiKey
+    model.apiStatus.firecrawlConfigured && flags.firecrawlMode !== 'off' && firecrawlApiKey
       ? createFirecrawlScraper({
           apiKey: firecrawlApiKey,
-          fetchImpl: ctx.trackedFetch,
+          fetchImpl: io.fetch,
         })
       : null
 
-  const readTweetWithBirdClient = hasBirdCli(ctx.env)
+  const readTweetWithBirdClient = hasBirdCli(io.env)
     ? ({ url, timeoutMs }: { url: string; timeoutMs: number }) =>
-        readTweetWithBird({ url, timeoutMs, env: ctx.env })
+        readTweetWithBird({ url, timeoutMs, env: io.env })
     : null
 
-  writeVerbose(ctx.stderr, ctx.verbose, 'extract start', ctx.verboseColor)
+  writeVerbose(io.stderr, flags.verbose, 'extract start', flags.verboseColor)
   const oscProgress = createOscProgressController({
     label: 'Fetching website',
-    env: ctx.env,
-    isTty: ctx.progressEnabled,
-    write: (data: string) => ctx.stderr.write(data),
+    env: io.env,
+    isTty: flags.progressEnabled,
+    write: (data: string) => io.stderr.write(data),
   })
   oscProgress.setIndeterminate('Fetching website')
   const spinner = startSpinner({
     text: 'Fetching website (connecting)…',
-    enabled: ctx.progressEnabled,
-    stream: ctx.stderr,
+    enabled: flags.progressEnabled,
+    stream: io.stderr,
   })
   const websiteProgress = createWebsiteProgress({
-    enabled: ctx.progressEnabled,
+    enabled: flags.progressEnabled,
     spinner,
     oscProgress,
   })
 
-  const cacheStore = ctx.cache.mode === 'default' ? ctx.cache.store : null
+  const cacheStore = cacheState.mode === 'default' ? cacheState.store : null
   const transcriptCache = cacheStore ? cacheStore.transcriptCache : null
 
   const client = createLinkPreviewClient({
-    apifyApiToken: ctx.apiStatus.apifyToken,
-    ytDlpPath: ctx.apiStatus.ytDlpPath,
-    falApiKey: ctx.apiStatus.falApiKey,
-    openaiApiKey: ctx.apiStatus.openaiTranscriptionKey,
+    apifyApiToken: model.apiStatus.apifyToken,
+    ytDlpPath: model.apiStatus.ytDlpPath,
+    falApiKey: model.apiStatus.falApiKey,
+    openaiApiKey: model.apiStatus.openaiTranscriptionKey,
     scrapeWithFirecrawl,
     convertHtmlToMarkdown: markdown.convertHtmlToMarkdown,
     readTweetWithBird: readTweetWithBirdClient,
     resolveTwitterCookies: async (_args) => {
-      const res = await resolveTwitterCookies({ env: ctx.env })
+      const res = await resolveTwitterCookies({ env: io.env })
       return {
         cookiesFromBrowser: res.cookies.cookiesFromBrowser,
         source: res.cookies.source,
         warnings: res.warnings,
       }
     },
-    fetch: ctx.trackedFetch,
+    fetch: io.fetch,
     transcriptCache,
     onProgress:
-      websiteProgress || ctx.onLinkPreviewProgress
+      websiteProgress || hooks.onLinkPreviewProgress
         ? (event) => {
             websiteProgress?.onProgress(event)
-            ctx.onLinkPreviewProgress?.(event)
+            hooks.onLinkPreviewProgress?.(event)
           }
         : null,
   })
@@ -153,25 +155,25 @@ export async function runUrlFlow({
   const clearProgressLine = () => {
     stopProgress()
   }
-  ctx.setClearProgressBeforeStdout(clearProgressLine)
+  hooks.setClearProgressBeforeStdout(clearProgressLine)
   try {
     const buildFetchOptions = (): FetchLinkContentOptions => ({
-      timeoutMs: ctx.timeoutMs,
+      timeoutMs: flags.timeoutMs,
       maxCharacters:
-        typeof ctx.maxExtractCharacters === 'number' && ctx.maxExtractCharacters > 0
-          ? ctx.maxExtractCharacters
+        typeof flags.maxExtractCharacters === 'number' && flags.maxExtractCharacters > 0
+          ? flags.maxExtractCharacters
           : undefined,
-      youtubeTranscript: ctx.youtubeMode,
-      firecrawl: ctx.firecrawlMode,
+      youtubeTranscript: flags.youtubeMode,
+      firecrawl: flags.firecrawlMode,
       format: markdown.markdownRequested ? 'markdown' : 'text',
       markdownMode: markdown.markdownRequested ? markdown.effectiveMarkdownMode : undefined,
-      cacheMode: ctx.cache.mode,
+      cacheMode: cacheState.mode,
     })
 
     const fetchWithCache = async (targetUrl: string): Promise<ExtractedLinkContent> => {
       const options = buildFetchOptions()
       const cacheKey =
-        cacheStore && ctx.cache.mode === 'default'
+        cacheStore && cacheState.mode === 'default'
           ? buildExtractCacheKey({
               url: targetUrl,
               options: {
@@ -188,20 +190,20 @@ export async function runUrlFlow({
       if (cacheKey && cacheStore) {
         const cached = cacheStore.getJson<ExtractedLinkContent>('extract', cacheKey)
         if (cached) {
-          writeVerbose(ctx.stderr, ctx.verbose, 'cache hit extract', ctx.verboseColor)
+          writeVerbose(io.stderr, flags.verbose, 'cache hit extract', flags.verboseColor)
           return cached
         }
-        writeVerbose(ctx.stderr, ctx.verbose, 'cache miss extract', ctx.verboseColor)
+        writeVerbose(io.stderr, flags.verbose, 'cache miss extract', flags.verboseColor)
       }
       const extracted = await fetchLinkContentWithBirdTip({
         client,
         url: targetUrl,
         options,
-        env: ctx.env,
+        env: io.env,
       })
       if (cacheKey && cacheStore) {
-        cacheStore.setJson('extract', cacheKey, extracted, ctx.cache.ttlMs)
-        writeVerbose(ctx.stderr, ctx.verbose, 'cache write extract', ctx.verboseColor)
+        cacheStore.setJson('extract', cacheKey, extracted, cacheState.ttlMs)
+        writeVerbose(io.stderr, flags.verbose, 'cache write extract', flags.verboseColor)
       }
       return extracted
     }
@@ -210,13 +212,13 @@ export async function runUrlFlow({
     let extractionUi = deriveExtractionUi(extracted)
 
     const updateSummaryProgress = () => {
-      if (!ctx.progressEnabled) return
+      if (!flags.progressEnabled) return
       websiteProgress?.stop?.()
-      if (!ctx.extractMode) {
+      if (!flags.extractMode) {
         oscProgress.setIndeterminate('Summarizing')
       }
       spinner.setText(
-        ctx.extractMode
+        flags.extractMode
           ? `Extracted (${extractionUi.contentSizeLabel}${extractionUi.viaSourceLabel})`
           : `Summarizing (sent ${extractionUi.contentSizeLabel}${extractionUi.viaSourceLabel})…`
       )
@@ -225,78 +227,79 @@ export async function runUrlFlow({
     updateSummaryProgress()
     logExtractionDiagnostics({
       extracted,
-      stderr: ctx.stderr,
-      verbose: ctx.verbose,
-      verboseColor: ctx.verboseColor,
+      stderr: io.stderr,
+      verbose: flags.verbose,
+      verboseColor: flags.verboseColor,
     })
     const transcriptCacheStatus = extracted.diagnostics?.transcript?.cacheStatus
     if (transcriptCacheStatus && transcriptCacheStatus !== 'unknown') {
       writeVerbose(
-        ctx.stderr,
-        ctx.verbose,
+        io.stderr,
+        flags.verbose,
         `cache ${transcriptCacheStatus} transcript`,
-        ctx.verboseColor
+        flags.verboseColor
       )
     }
 
     if (
-      ctx.extractMode &&
+      flags.extractMode &&
       markdown.markdownRequested &&
-      ctx.preprocessMode !== 'off' &&
+      flags.preprocessMode !== 'off' &&
       markdown.effectiveMarkdownMode === 'auto' &&
       !extracted.diagnostics.markdown.used &&
-      !hasUvxCli(ctx.env)
+      !hasUvxCli(io.env)
     ) {
-      ctx.stderr.write(`${UVX_TIP}\n`)
+      io.stderr.write(`${UVX_TIP}\n`)
     }
 
     if (!isYoutubeUrl && extracted.isVideoOnly && extracted.video) {
       if (extracted.video.kind === 'youtube') {
         writeVerbose(
-          ctx.stderr,
-          ctx.verbose,
+          io.stderr,
+          flags.verbose,
           `video-only page detected; switching to YouTube URL ${extracted.video.url}`,
-          ctx.verboseColor
+          flags.verboseColor
         )
-        if (ctx.progressEnabled) {
+        if (flags.progressEnabled) {
           spinner.setText('Video-only page: fetching YouTube transcript…')
         }
         extracted = await fetchWithCache(extracted.video.url)
         extractionUi = deriveExtractionUi(extracted)
         updateSummaryProgress()
       } else if (extracted.video.kind === 'direct') {
-        const wantsVideoUnderstanding = ctx.videoMode === 'understand' || ctx.videoMode === 'auto'
+        const wantsVideoUnderstanding =
+          flags.videoMode === 'understand' || flags.videoMode === 'auto'
         // Direct video URLs require a model that can consume video attachments (currently Gemini).
         const canVideoUnderstand =
           wantsVideoUnderstanding &&
-          ctx.apiStatus.googleConfigured &&
-          (ctx.requestedModel.kind === 'auto' ||
-            (ctx.fixedModelSpec?.transport === 'native' &&
-              ctx.fixedModelSpec.provider === 'google'))
+          model.apiStatus.googleConfigured &&
+          (model.requestedModel.kind === 'auto' ||
+            (model.fixedModelSpec?.transport === 'native' &&
+              model.fixedModelSpec.provider === 'google'))
 
         if (canVideoUnderstand) {
-          ctx.onExtracted?.(extracted)
-          if (ctx.progressEnabled) spinner.setText('Downloading video…')
+          hooks.onExtracted?.(extracted)
+          if (flags.progressEnabled) spinner.setText('Downloading video…')
           const loadedVideo = await loadRemoteAsset({
             url: extracted.video.url,
-            fetchImpl: ctx.trackedFetch,
-            timeoutMs: ctx.timeoutMs,
+            fetchImpl: io.fetch,
+            timeoutMs: flags.timeoutMs,
           })
           assertAssetMediaTypeSupported({ attachment: loadedVideo.attachment, sizeLabel: null })
 
           let chosenModel: string | null = null
-          if (ctx.progressEnabled) spinner.setText('Summarizing video…')
-          await ctx.summarizeAsset({
+          if (flags.progressEnabled) spinner.setText('Summarizing video…')
+          await hooks.summarizeAsset({
             sourceKind: 'asset-url',
             sourceLabel: loadedVideo.sourceLabel,
             attachment: loadedVideo.attachment,
             onModelChosen: (modelId) => {
               chosenModel = modelId
-              ctx.onModelChosen?.(modelId)
-              if (ctx.progressEnabled) spinner.setText(`Summarizing video (model: ${modelId})…`)
+              hooks.onModelChosen?.(modelId)
+              if (flags.progressEnabled) spinner.setText(`Summarizing video (model: ${modelId})…`)
             },
           })
-          ctx.writeViaFooter([
+          hooks.writeViaFooter([
             ...extractionUi.footerParts,
             ...(chosenModel ? [`model ${chosenModel}`] : []),
           ])
@@ -305,15 +308,15 @@ export async function runUrlFlow({
       }
     }
 
-    ctx.onExtracted?.(extracted)
+    hooks.onExtracted?.(extracted)
 
     const prompt = buildUrlPrompt({
       extracted,
-      outputLanguage: ctx.outputLanguage,
-      lengthArg: ctx.lengthArg,
-      promptOverride: ctx.promptOverride ?? null,
-      lengthInstruction: ctx.lengthInstruction ?? null,
-      languageInstruction: ctx.languageInstruction ?? null,
+      outputLanguage: flags.outputLanguage,
+      lengthArg: flags.lengthArg,
+      promptOverride: flags.promptOverride ?? null,
+      lengthInstruction: flags.lengthInstruction ?? null,
+      languageInstruction: flags.languageInstruction ?? null,
     })
 
     // Whisper transcription costs need to be folded into the finish line totals.
@@ -321,13 +324,13 @@ export async function runUrlFlow({
       transcriptionProvider: extracted.transcriptionProvider,
       transcriptSource: extracted.transcriptSource,
       mediaDurationSeconds: extracted.mediaDurationSeconds,
-      openaiWhisperUsdPerMinute: ctx.openaiWhisperUsdPerMinute,
+      openaiWhisperUsdPerMinute: model.openaiWhisperUsdPerMinute,
     })
     const transcriptionCostLabel =
       typeof transcriptionCostUsd === 'number' ? `txcost=${formatUSD(transcriptionCostUsd)}` : null
-    ctx.setTranscriptionCost(transcriptionCostUsd, transcriptionCostLabel)
+    hooks.setTranscriptionCost(transcriptionCostUsd, transcriptionCostLabel)
 
-    if (ctx.extractMode) {
+    if (flags.extractMode) {
       await outputExtractedUrl({
         ctx,
         url,
@@ -341,8 +344,8 @@ export async function runUrlFlow({
     }
 
     const onModelChosen = (modelId: string) => {
-      ctx.onModelChosen?.(modelId)
-      if (!ctx.progressEnabled) return
+      hooks.onModelChosen?.(modelId)
+      if (!flags.progressEnabled) return
       spinner.setText(
         `Summarizing (sent ${extractionUi.contentSizeLabel}${extractionUi.viaSourceLabel}, model: ${modelId})…`
       )
@@ -359,7 +362,7 @@ export async function runUrlFlow({
       onModelChosen,
     })
   } finally {
-    ctx.clearProgressIfCurrent(clearProgressLine)
+    hooks.clearProgressIfCurrent(clearProgressLine)
     stopProgress()
   }
 }

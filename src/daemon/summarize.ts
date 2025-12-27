@@ -188,11 +188,11 @@ export async function streamSummaryForVisiblePage({
   const extractionUi = deriveExtractionUi(extracted)
   const prompt = buildUrlPrompt({
     extracted,
-    outputLanguage: ctx.outputLanguage,
-    lengthArg: ctx.lengthArg,
-    promptOverride: ctx.promptOverride ?? null,
-    lengthInstruction: ctx.lengthInstruction ?? null,
-    languageInstruction: ctx.languageInstruction ?? null,
+    outputLanguage: ctx.flags.outputLanguage,
+    lengthArg: ctx.flags.lengthArg,
+    promptOverride: ctx.flags.promptOverride ?? null,
+    lengthInstruction: ctx.flags.lengthInstruction ?? null,
+    languageInstruction: ctx.flags.languageInstruction ?? null,
   })
 
   await summarizeExtractedUrl({
@@ -203,15 +203,15 @@ export async function streamSummaryForVisiblePage({
     prompt,
     effectiveMarkdownMode: 'off',
     transcriptionCostLabel: null,
-    onModelChosen: ctx.onModelChosen ?? null,
+    onModelChosen: ctx.hooks.onModelChosen ?? null,
   })
 
-  const report = await ctx.buildReport()
-  const costUsd = await ctx.estimateCostUsd()
+  const report = await ctx.hooks.buildReport()
+  const costUsd = await ctx.hooks.estimateCostUsd()
   const elapsedMs = Date.now() - startedAt
 
   const label = extracted.siteName ?? guessSiteName(extracted.url)
-  const modelLabel = usedModel ?? ctx.requestedModelLabel
+  const modelLabel = usedModel ?? ctx.model.requestedModelLabel
   const compact = buildFinishLineText({
     elapsedMs,
     label,
@@ -307,12 +307,12 @@ export async function streamSummaryForUrl({
     throw new Error('Internal error: missing extracted content')
   }
 
-  const report = await ctx.buildReport()
-  const costUsd = await ctx.estimateCostUsd()
+  const report = await ctx.hooks.buildReport()
+  const costUsd = await ctx.hooks.estimateCostUsd()
   const elapsedMs = Date.now() - startedAt
 
   const label = extracted.siteName ?? guessSiteName(extracted.url)
-  const modelLabel = usedModel ?? ctx.requestedModelLabel
+  const modelLabel = usedModel ?? ctx.model.requestedModelLabel
   const compactExtraParts = buildLengthPartsForFinishLine(extracted, false)
   const detailedExtraParts = buildLengthPartsForFinishLine(extracted, true)
 

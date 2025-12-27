@@ -9,7 +9,7 @@ import { createDaemonUrlFlowContext } from '../src/daemon/flow-context.js'
 import { runUrlFlow } from '../src/run/flows/url/flow.js'
 
 describe('runUrlFlow', () => {
-  it('honors ctx.maxExtractCharacters (for daemon/extension)', async () => {
+  it('honors ctx.flags.maxExtractCharacters (for daemon/extension)', async () => {
     const root = mkdtempSync(join(tmpdir(), 'summarize-url-flow-maxchars-'))
     const url = 'https://example.com/article'
     const content = `<!doctype html><html><head><title>Hello</title></head><body><article>${'word '.repeat(5000)}</article></body></html>`
@@ -53,7 +53,7 @@ describe('runUrlFlow', () => {
       stdoutSink: { writeChunk: () => {} },
     })
 
-    ;(ctx as unknown as { extractMode: boolean }).extractMode = true
+    ctx.flags.extractMode = true
 
     await runUrlFlow({ ctx, url, isYoutubeUrl: false })
 
