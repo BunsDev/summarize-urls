@@ -21,6 +21,7 @@
 ### Fixed
 
 - Chrome Side Panel: avoid MV3 background stream stalls by streaming SSE from the panel page; improve auto-summarize de-dupe; keep background theme continuous on long summaries; avoid “disconnected port” errors by using runtime messaging; show a subtle summary metrics footer.
+- Daemon: prefer the installed env snapshot over launchd’s minimal environment (fixes missing `yt-dlp` / `whisper.cpp` on PATH, especially for X/Twitter video transcription).
 - Transcripts: show yt-dlp download progress bytes instead of staying at 0 B.
 - Transcripts: stabilize yt-dlp download totals to prevent bouncing progress bars.
 - Streaming: stop/clear progress UI before first streamed output to avoid sticky “Summarizing …” lines in scrollback.

@@ -20,6 +20,9 @@ Dev (repo checkout):
 - “Daemon not reachable”:
   - `summarize daemon status`
   - Logs: `~/.summarize/logs/daemon.err.log`
+- Tweet video not transcribing / no progress:
+  - Ensure `yt-dlp` is available on your PATH (or set `YT_DLP_PATH`) and you have a transcription provider (`whisper.cpp` installed or `OPENAI_API_KEY` / `FAL_KEY`).
+  - Re-run `summarize daemon install --token <TOKEN>` to refresh the daemon env snapshot (launchd won’t inherit your shell PATH).
 - “Could not establish connection / Receiving end does not exist”:
   - The content script wasn’t injected (yet), or Chrome blocked site access.
   - Chrome → extension details → “Site access” → “On all sites” (or allow the domain), then reload the tab.
