@@ -114,13 +114,58 @@
         </label>
         <label>
           <span>Color scheme</span>
-          <select id="colorScheme">
-            <option value="slate">Slate</option>
-            <option value="cedar">Cedar</option>
-            <option value="mint">Mint</option>
-            <option value="ocean">Ocean</option>
-            <option value="ember">Ember</option>
-            <option value="iris">Iris</option>
+          <select id="colorScheme" class="schemeSelect">
+            <button type="button">
+              <selectedcontent></selectedcontent>
+            </button>
+            <option value="slate">
+              <span class="scheme-option">
+                <span class="scheme-label">Slate</span>
+                <span class="scheme-chips scheme-slate" aria-hidden="true">
+                  <span></span><span></span><span></span><span></span>
+                </span>
+              </span>
+            </option>
+            <option value="cedar">
+              <span class="scheme-option">
+                <span class="scheme-label">Cedar</span>
+                <span class="scheme-chips scheme-cedar" aria-hidden="true">
+                  <span></span><span></span><span></span><span></span>
+                </span>
+              </span>
+            </option>
+            <option value="mint">
+              <span class="scheme-option">
+                <span class="scheme-label">Mint</span>
+                <span class="scheme-chips scheme-mint" aria-hidden="true">
+                  <span></span><span></span><span></span><span></span>
+                </span>
+              </span>
+            </option>
+            <option value="ocean">
+              <span class="scheme-option">
+                <span class="scheme-label">Ocean</span>
+                <span class="scheme-chips scheme-ocean" aria-hidden="true">
+                  <span></span><span></span><span></span><span></span>
+                </span>
+              </span>
+            </option>
+            <option value="ember">
+              <span class="scheme-option">
+                <span class="scheme-label">Ember</span>
+                <span class="scheme-chips scheme-ember" aria-hidden="true">
+                  <span></span><span></span><span></span><span></span>
+                </span>
+              </span>
+            </option>
+            <option value="iris">
+              <span class="scheme-option">
+                <span class="scheme-label">Iris</span>
+                <span class="scheme-chips scheme-iris" aria-hidden="true">
+                  <span></span><span></span><span></span><span></span>
+                </span>
+              </span>
+            </option>
           </select>
         </label>
         <label>
