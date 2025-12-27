@@ -80,6 +80,13 @@ header {
   backdrop-filter: blur(12px);
 }
 
+.brand {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
 .title {
   font-weight: 800;
   letter-spacing: 0.2px;
@@ -91,7 +98,7 @@ header {
   font-size: 12px;
   margin-top: 2px;
   min-height: 15px;
-  max-width: 240px;
+  width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
