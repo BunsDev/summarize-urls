@@ -247,23 +247,29 @@ input[type="range"] {
 }
 
 .progressFill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
   height: 100%;
   width: 0%;
   background: var(--accent2);
-  transform: translateX(0);
-  will-change: transform, width;
+  will-change: left, width;
 }
 
 header.isRunning .progressFill {
+  left: 0;
   width: var(--progress, 0%);
 }
 
 header.isRunning.isIndeterminate .progressFill {
+  left: 0;
   width: 40%;
-  animation: progressBounce 1.15s cubic-bezier(0.22, 0.9, 0.25, 1) infinite alternate;
+  animation: progressPingPong 1.25s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 header.isError .progressFill {
+  left: 0;
   width: 100%;
   background: rgba(255, 90, 90, 0.75);
 }
@@ -272,21 +278,27 @@ main {
   padding: 12px;
 }
 
-@keyframes progressBounce {
+@keyframes progressPingPong {
   0% {
-    transform: translateX(-100%);
+    left: 0%;
   }
-  12% {
-    transform: translateX(-85%);
+  44% {
+    left: 60%;
   }
-  45% {
-    transform: translateX(150%);
+  50% {
+    left: 63%;
   }
-  75% {
-    transform: translateX(165%);
+  56% {
+    left: 60%;
+  }
+  92% {
+    left: 0%;
+  }
+  96% {
+    left: -3%;
   }
   100% {
-    transform: translateX(150%);
+    left: 0%;
   }
 }
 
