@@ -9,6 +9,7 @@
 ### Features
 
 - Chrome: add a real **Side Panel** extension (MV3) that summarizes the **current tab** and renders streamed Markdown.
+- Chrome Side Panel: add a custom icon + set extension `homepage_url` to `summarize.sh`; add “Docs” links in the panel and settings UI.
 - Chrome Side Panel: add `--length` + `--language` settings (presets + custom) forwarded to the daemon.
 - Daemon: add `summarize daemon …` (LaunchAgent-backed localhost server on `127.0.0.1:8787`) for extension ↔ CLI integration.
   - Token pairing (shared secret)
@@ -22,7 +23,9 @@
 ### Fixed
 
 - Chrome Side Panel: avoid MV3 background stream stalls by streaming SSE from the panel page; improve auto-summarize de-dupe; keep background theme continuous on long summaries; avoid “disconnected port” errors by using runtime messaging; show a subtle summary metrics footer.
+- Chrome Side Panel: move “working” status into the header (no layout jump) and show progress as a 1px separator line; allow the subtitle to use full available width.
 - Daemon: prefer the installed env snapshot over launchd’s minimal environment (fixes missing `yt-dlp` / `whisper.cpp` on PATH, especially for X/Twitter video transcription).
+- Finish line: shorten transcript summaries to include source (`YouTube` / `podcast`) and avoid repeating the label.
 - Transcripts: show yt-dlp download progress bytes instead of staying at 0 B.
 - Transcripts: stabilize yt-dlp download totals to prevent bouncing progress bars.
 - Streaming: stop/clear progress UI before first streamed output to avoid sticky “Summarizing …” lines in scrollback.
