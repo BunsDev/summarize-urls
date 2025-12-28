@@ -827,6 +827,8 @@ select {
 .pickerPositioner {
   position: fixed;
   z-index: 2000;
+  width: var(--reference-width);
+  max-width: var(--reference-width);
 }
 
 .pickerContent {
@@ -854,6 +856,11 @@ select {
 
 .pickerPositioner[data-picker="length"] .pickerContent {
   min-width: min(220px, 100%);
+}
+
+.pickerPositioner[data-picker="length"] {
+  width: max(220px, var(--reference-width, 0px));
+  max-width: var(--available-width, 100vw);
 }
 
 .pickerPositioner[data-picker="length"] .pickerList {
