@@ -1,4 +1,9 @@
-import { formatCompactCount, formatDurationSecondsSmart, formatElapsedMs } from '../tty/format.js'
+import {
+  formatCompactCount,
+  formatDurationSecondsSmart,
+  formatElapsedMs,
+  formatMinutesSmart,
+} from '../tty/format.js'
 import { formatUSD, sumNumbersOrNull } from './format.js'
 import { ansi } from './terminal.js'
 
@@ -72,7 +77,7 @@ function buildCompactTranscriptPart(extracted: ExtractedForLengths): string | nu
 
   const wordEstimate = Math.max(0, Math.round(transcriptChars / 6))
   const transcriptWords = extracted.transcriptWordCount ?? wordEstimate
-  const minutesEstimate = Math.max(1, Math.round(transcriptWords / 160))
+  const minutesEstimate = Math.max(0.1, transcriptWords / 160)
 
   const exactDurationSeconds =
     typeof extracted.mediaDurationSeconds === 'number' && extracted.mediaDurationSeconds > 0
@@ -81,7 +86,7 @@ function buildCompactTranscriptPart(extracted: ExtractedForLengths): string | nu
   const duration =
     exactDurationSeconds != null
       ? formatDurationSecondsSmart(exactDurationSeconds)
-      : `~${formatDurationSecondsSmart(minutesEstimate * 60)}`
+      : formatMinutesSmart(minutesEstimate)
 
   const wordLabel = `${formatCompactCount(transcriptWords)} words`
 
@@ -122,7 +127,7 @@ function buildDetailedLengthPartsForExtracted(extracted: ExtractedForLengths): s
     // - `mediaDurationSeconds`: best-effort, sourced from provider metadata (e.g. RSS itunes:duration)
     const wordEstimate = Math.max(0, Math.round(extracted.transcriptCharacters / 6))
     const transcriptWords = extracted.transcriptWordCount ?? wordEstimate
-    const minutesEstimate = Math.max(1, Math.round(transcriptWords / 160))
+    const minutesEstimate = Math.max(0.1, transcriptWords / 160)
 
     const details: string[] = [
       `~${formatCompactCount(transcriptWords)} words`,
@@ -132,7 +137,7 @@ function buildDetailedLengthPartsForExtracted(extracted: ExtractedForLengths): s
     const durationPart =
       typeof extracted.mediaDurationSeconds === 'number' && extracted.mediaDurationSeconds > 0
         ? formatDurationSecondsSmart(extracted.mediaDurationSeconds)
-        : `~${formatDurationSecondsSmart(minutesEstimate * 60)}`
+        : formatMinutesSmart(minutesEstimate)
 
     parts.push(`transcript=${durationPart} (${details.join(' · ')})`)
   }

@@ -50,6 +50,13 @@ export function formatCompactCount(value: number): string {
   return String(Math.floor(value))
 }
 
+export function formatMinutesSmart(valueMinutes: number): string {
+  if (!Number.isFinite(valueMinutes)) return 'unknown'
+  const minutes = Math.max(0, valueMinutes)
+  const decimals = minutes >= 10 ? 0 : 1
+  return `${minutes.toFixed(decimals)} min`
+}
+
 export function formatDurationSecondsSmart(value: number): string {
   if (!Number.isFinite(value)) return 'unknown'
   const totalSeconds = Math.max(0, Math.round(value))

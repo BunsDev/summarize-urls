@@ -1,4 +1,8 @@
-import { formatCompactCount, formatDurationSecondsSmart } from '../tty/format.js'
+import {
+  formatCompactCount,
+  formatDurationSecondsSmart,
+  formatMinutesSmart,
+} from '../tty/format.js'
 
 export type InputSummaryArgs = {
   kindLabel: string | null
@@ -25,8 +29,9 @@ export function formatInputSummary({
 
   if (kindLabel) {
     if (durationSeconds != null && durationSeconds > 0) {
-      const base = formatDurationSecondsSmart(durationSeconds)
-      const duration = isDurationApproximate ? `~${base}` : base
+      const duration = isDurationApproximate
+        ? formatMinutesSmart(durationSeconds / 60)
+        : formatDurationSecondsSmart(durationSeconds)
       parts.push(`${duration} ${kindLabel}`)
     } else {
       parts.push(kindLabel)

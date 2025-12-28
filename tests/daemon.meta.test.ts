@@ -33,7 +33,7 @@ describe('daemon/meta', () => {
           words: 1700,
           characters: 10200,
         })
-      ).toBe('~10m YouTube · 1.7k words · 10k chars')
+      ).toBe('10 min YouTube · 1.7k words · 10k chars')
     })
 
     it('includes kind label without duration', () => {
