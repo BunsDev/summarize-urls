@@ -35,6 +35,10 @@ function assertNoErrors(harness: ExtensionHarness) {
   expect(filterAllowed(harness.consoleErrors)).toEqual([])
 }
 
+function getOpenPickerList(page: Page) {
+  return page.locator('#summarize-overlay-root .pickerContent:not([hidden]) .pickerList')
+}
+
 async function launchExtension(): Promise<ExtensionHarness> {
   if (!fs.existsSync(extensionPath)) {
     throw new Error('Missing built extension. Run: pnpm -C apps/chrome-extension build')
@@ -102,10 +106,10 @@ test('sidepanel scheme picker supports keyboard selection', async () => {
 
     const schemeLabel = page.locator('label.scheme')
     const schemeTrigger = schemeLabel.locator('.pickerTrigger')
-    const schemeList = schemeLabel.locator('.pickerList')
 
     await schemeTrigger.focus()
     await schemeTrigger.press('Enter')
+    const schemeList = getOpenPickerList(page)
     await expect(schemeList).toBeVisible()
     await schemeList.focus()
     await page.keyboard.press('ArrowDown')
@@ -128,10 +132,10 @@ test('sidepanel mode picker updates theme mode', async () => {
 
     const modeLabel = page.locator('label.mode')
     const modeTrigger = modeLabel.locator('.pickerTrigger')
-    const modeList = modeLabel.locator('.pickerList')
 
     await modeTrigger.focus()
     await modeTrigger.press('Enter')
+    const modeList = getOpenPickerList(page)
     await expect(modeList).toBeVisible()
     await modeList.focus()
     await page.keyboard.press('ArrowDown')
@@ -154,10 +158,10 @@ test('options pickers support keyboard selection', async () => {
 
     const schemeLabel = page.locator('label.scheme')
     const schemeTrigger = schemeLabel.locator('.pickerTrigger')
-    const schemeList = schemeLabel.locator('.pickerList')
 
     await schemeTrigger.focus()
     await schemeTrigger.press('Enter')
+    const schemeList = getOpenPickerList(page)
     await expect(schemeList).toBeVisible()
     await schemeList.focus()
     await page.keyboard.press('ArrowDown')
@@ -168,10 +172,10 @@ test('options pickers support keyboard selection', async () => {
 
     const modeLabel = page.locator('label.mode')
     const modeTrigger = modeLabel.locator('.pickerTrigger')
-    const modeList = modeLabel.locator('.pickerList')
 
     await modeTrigger.focus()
     await modeTrigger.press('Enter')
+    const modeList = getOpenPickerList(page)
     await expect(modeList).toBeVisible()
     await modeList.focus()
     await page.keyboard.press('ArrowDown')
@@ -192,10 +196,10 @@ test('options scheme list renders chips', async () => {
 
     const schemeLabel = page.locator('label.scheme')
     const schemeTrigger = schemeLabel.locator('.pickerTrigger')
-    const schemeList = schemeLabel.locator('.pickerList')
 
     await schemeTrigger.focus()
     await schemeTrigger.press('Enter')
+    const schemeList = getOpenPickerList(page)
     await expect(schemeList).toBeVisible()
 
     const options = schemeList.locator('.pickerOption')
