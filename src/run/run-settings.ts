@@ -103,9 +103,7 @@ export function resolveCliRunSettings({
     {
       firecrawl,
       markdownMode:
-        format === 'markdown'
-          ? ((markdownMode ?? markdown ?? 'readability') as string)
-          : 'off',
+        format === 'markdown' ? ((markdownMode ?? markdown ?? 'readability') as string) : 'off',
       preprocess,
       youtube,
       timeout,

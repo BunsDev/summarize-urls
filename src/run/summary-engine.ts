@@ -8,13 +8,13 @@ import type { PromptPayload } from '../llm/prompt.js'
 import { formatCompactCount } from '../tty/format.js'
 import { createRetryLogger, writeVerbose } from './logging.js'
 import { prepareMarkdownForTerminalStreaming } from './markdown.js'
+import { createStreamOutputGate, type StreamOutputMode } from './stream-output.js'
 import {
   isGoogleStreamingUnsupportedError,
   isStreamingTimeoutError,
   mergeStreamingChunk,
 } from './streaming.js'
 import { resolveModelIdForLlmCall, summarizeWithModelId } from './summary-llm.js'
-import { type StreamOutputMode, createStreamOutputGate } from './stream-output.js'
 import { isRichTty, markdownRenderWidth, supportsColor } from './terminal.js'
 import type { ModelAttempt, ModelMeta } from './types.js'
 
