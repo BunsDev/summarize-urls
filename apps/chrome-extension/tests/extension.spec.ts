@@ -547,3 +547,34 @@ test('options scheme list renders chips', async () => {
     await closeExtension(harness.context, harness.userDataDir)
   }
 })
+
+test('sidepanel auto summarize toggle stays inline', async () => {
+  const harness = await launchExtension()
+
+  try {
+    const page = await openExtensionPage(harness, 'sidepanel.html', '#title')
+    await page.click('#drawerToggle')
+    await expect(page.locator('#drawer')).toBeVisible()
+
+    const label = page.locator('#autoToggle .checkboxRoot')
+    await expect(label).toBeVisible()
+    const labelBox = await label.boundingBox()
+    const controlBox = await page.locator('#autoToggle .checkboxControl').boundingBox()
+    const textBox = await page.locator('#autoToggle .checkboxLabel').boundingBox()
+
+    expect(labelBox).not.toBeNull()
+    expect(controlBox).not.toBeNull()
+    expect(textBox).not.toBeNull()
+
+    if (labelBox && controlBox && textBox) {
+      expect(controlBox.y).toBeGreaterThanOrEqual(labelBox.y - 1)
+      expect(controlBox.y).toBeLessThanOrEqual(labelBox.y + labelBox.height - 1)
+      expect(textBox.y).toBeGreaterThanOrEqual(labelBox.y - 1)
+      expect(textBox.y).toBeLessThanOrEqual(labelBox.y + labelBox.height - 1)
+    }
+
+    assertNoErrors(harness)
+  } finally {
+    await closeExtension(harness.context, harness.userDataDir)
+  }
+})
