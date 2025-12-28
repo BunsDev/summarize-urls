@@ -206,7 +206,7 @@ Use `summarize --help` or `summarize help` for the full help text.
 - `--plain`: Keep raw output (no ANSI/OSC Markdown rendering)
 - `--no-color`: disable ANSI colors
 - `--format md|text`: website/file content format (default `text`)
-- `--markdown-mode off|auto|llm|readability`: HTML→Markdown conversion mode (default `readability`; `readability` uses Readability article HTML as input)
+- `--markdown-mode off|auto|llm|readability`: Markdown conversion mode (default `readability`). For websites: HTML→Markdown conversion. For YouTube transcripts: `llm` formats the raw transcript into clean Markdown (headings/paragraphs).
 - `--preprocess off|auto|always`: controls `uvx markitdown` usage (default `auto`; `always` forces file preprocessing)
   - Install `uvx`: `brew install uv` (or https://astral.sh/uv/)
 - `--extract`: print extracted content and exit (no summary) — only for URLs
@@ -284,7 +284,7 @@ Non-YouTube URLs go through a “fetch → extract” pipeline. When the direct 
 
 - `--firecrawl off|auto|always` (default `auto`)
 - `--extract --format md|text` (default `text`; if `--format` is omitted, `--extract` defaults to `md` for non-YouTube URLs)
-- `--markdown-mode off|auto|llm|readability` (default `readability`; only affects `--format md` for non-YouTube URLs)
+- `--markdown-mode off|auto|llm|readability` (default `readability`; for non-YouTube URLs this controls HTML→Markdown conversion)
   - `auto`: use an LLM converter when configured; may fall back to `uvx markitdown`
   - `llm`: force LLM conversion (requires a configured model key)
   - `off`: disable LLM conversion (still may return Firecrawl Markdown when configured)
@@ -306,6 +306,12 @@ Environment variables for yt-dlp mode:
 - `FAL_KEY` - FAL AI Whisper fallback
 
 Apify costs money but tends to be more reliable when captions exist.
+
+Format the extracted transcript as Markdown (headings + paragraphs) via an LLM:
+
+```bash
+summarize "https://www.youtube.com/watch?v=..." --extract --format md --markdown-mode llm
+```
 
 ## Media transcription (Whisper)
 
