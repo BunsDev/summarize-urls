@@ -54,7 +54,9 @@ export function formatMinutesSmart(valueMinutes: number): string {
   if (!Number.isFinite(valueMinutes)) return 'unknown'
   const minutes = Math.max(0, valueMinutes)
   const decimals = minutes >= 10 ? 0 : 1
-  return `${minutes.toFixed(decimals)} min`
+  const formatted = minutes.toFixed(decimals)
+  const trimmed = formatted.endsWith('.0') ? formatted.slice(0, -2) : formatted
+  return `${trimmed} min`
 }
 
 export function formatDurationSecondsSmart(value: number): string {
