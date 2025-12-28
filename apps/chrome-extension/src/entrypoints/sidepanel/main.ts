@@ -5,8 +5,8 @@ import { defaultSettings, loadSettings, patchSettings } from '../../lib/settings
 import { parseSseStream } from '../../lib/sse'
 import { splitStatusPercent } from '../../lib/status'
 import { applyTheme } from '../../lib/theme'
-import { mountCheckbox } from '../../ui/zag-checkbox'
 import { generateToken } from '../../lib/token'
+import { mountCheckbox } from '../../ui/zag-checkbox'
 import { mountSidepanelLengthPicker, mountSidepanelPickers } from './pickers'
 
 type PanelToBg =

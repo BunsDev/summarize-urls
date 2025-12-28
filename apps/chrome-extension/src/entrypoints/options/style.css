@@ -429,13 +429,13 @@ form {
 }
 
 .sectionToggle::after {
-  content: '+';
+  content: "+";
   color: var(--muted);
   font-size: 14px;
 }
 
-.sectionToggle[aria-expanded='true']::after {
-  content: '-';
+.sectionToggle[aria-expanded="true"]::after {
+  content: "-";
 }
 
 .section h2 {
@@ -780,10 +780,13 @@ textarea {
   background: var(--surface);
   display: grid;
   place-items: center;
-  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
 }
 
-.checkboxControl[data-state='checked'] {
+.checkboxControl[data-state="checked"] {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
   background: color-mix(in srgb, var(--accent) 75%, transparent);
   color: #fff;
@@ -798,10 +801,12 @@ textarea {
   place-items: center;
   opacity: 0;
   transform: scale(0.6);
-  transition: opacity 160ms ease, transform 160ms ease;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
 }
 
-.checkboxControl[data-state='checked'] .checkboxIndicator {
+.checkboxControl[data-state="checked"] .checkboxIndicator {
   opacity: 1;
   transform: scale(1);
 }

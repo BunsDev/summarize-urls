@@ -1,5 +1,5 @@
-import { normalizeProps, useMachine } from '@zag-js/preact'
 import * as checkbox from '@zag-js/checkbox'
+import { normalizeProps, useMachine } from '@zag-js/preact'
 import { render } from 'preact'
 import { useEffect, useRef } from 'preact/hooks'
 
