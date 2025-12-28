@@ -52,18 +52,24 @@ phase_build() {
 phase_verify_pack() {
   banner "Verify pack"
   require_lockstep_versions
-  local version tmp_dir tarball install_dir
+  local version tmp_dir tarball core_tarball install_dir
   version="$(node -p 'require("./package.json").version')"
   tmp_dir="$(mktemp -d)"
+  core_tarball="${tmp_dir}/steipete-summarize-core-${version}.tgz"
   tarball="${tmp_dir}/steipete-summarize-${version}.tgz"
+  run pnpm -C packages/core pack --pack-destination "${tmp_dir}"
   run pnpm pack --pack-destination "${tmp_dir}"
+  if [ ! -f "${core_tarball}" ]; then
+    echo "Missing ${core_tarball}"
+    exit 1
+  fi
   if [ ! -f "${tarball}" ]; then
     echo "Missing ${tarball}"
     exit 1
   fi
   install_dir="${tmp_dir}/install"
   run mkdir -p "${install_dir}"
-  run npm install --silent --prefix "${install_dir}" "${tarball}"
+  run npm install --prefix "${install_dir}" "${core_tarball}" "${tarball}"
   run node "${install_dir}/node_modules/@steipete/summarize/dist/cli.js" --help >/dev/null
   echo "ok"
 }
