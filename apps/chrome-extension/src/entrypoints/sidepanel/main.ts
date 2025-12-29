@@ -406,6 +406,15 @@ const hoverToggle = mountCheckbox(hoverToggleRoot, {
   onCheckedChange: (checked) => {
     hoverSummariesValue = checked
     void patchSettings({ hoverSummaries: checked })
+    hoverToggle.update({
+      id: 'sidepanel-hover',
+      label: 'Hover summaries',
+      checked: hoverSummariesValue,
+      onCheckedChange: (nextChecked) => {
+        hoverSummariesValue = nextChecked
+        void patchSettings({ hoverSummaries: nextChecked })
+      },
+    })
   },
 })
 
