@@ -1478,6 +1478,14 @@ function updateControls(state: UiState) {
       onLengthChange: pickerHandlers.onLengthChange,
     })
   }
+  if (
+    state.settings.fontSize !== currentFontSize ||
+    state.settings.lineHeight !== currentLineHeight
+  ) {
+    applyTypography(pickerSettings.fontFamily, state.settings.fontSize, state.settings.lineHeight)
+    setCurrentFontSize(state.settings.fontSize)
+    setCurrentLineHeight(state.settings.lineHeight)
+  }
   if (readCurrentModelValue() !== state.settings.model) {
     setModelValue(state.settings.model)
   }

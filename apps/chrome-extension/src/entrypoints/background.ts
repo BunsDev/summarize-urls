@@ -67,6 +67,8 @@ type UiState = {
     autoSummarize: boolean
     hoverSummaries: boolean
     chatEnabled: boolean
+    fontSize: number
+    lineHeight: number
     model: string
     length: string
     tokenPresent: boolean
@@ -498,6 +500,8 @@ export default defineBackground(() => {
         autoSummarize: settings.autoSummarize,
         hoverSummaries: settings.hoverSummaries,
         chatEnabled: settings.chatEnabled,
+        fontSize: settings.fontSize,
+        lineHeight: settings.lineHeight,
         model: settings.model,
         length: settings.length,
         tokenPresent: Boolean(settings.token.trim()),

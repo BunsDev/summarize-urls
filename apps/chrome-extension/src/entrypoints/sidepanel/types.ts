@@ -8,6 +8,8 @@ export type UiState = {
     autoSummarize: boolean
     hoverSummaries: boolean
     chatEnabled: boolean
+    fontSize: number
+    lineHeight: number
     model: string
     length: string
     tokenPresent: boolean
