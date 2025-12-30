@@ -31,6 +31,7 @@
 
 - Auto model selection: OpenRouter fallback now resolves provider-specific ids (dash/dot slug normalization) and skips fallback when no unique match.
 - Language auto: default to English when detection is uncertain.
+- OpenAI GPT-5: skip `temperature` in streaming requests to avoid 400s for unsupported params.
 - Chrome Side Panel: show a retryable error state when the daemon stream fails or stalls instead of silently hanging.
 - Chrome Side Panel: avoid startup crash when a run is aborted while a request is in flight.
 - Chrome Side Panel chat: when a video page was previously summarized from page text, chat now re-extracts via the daemon so duration + transcription metadata are included.
@@ -42,6 +43,7 @@
 - Tests: cover extension duration parsing and precedence.
 - Tests: cover side panel free-model refresh error and options footer link.
 - Tests: add extension e2e coverage for content-script duration metadata and run extension e2e in root `pnpm -s check`.
+- Tests: add GPT-5 temperature regression for stream/generate + live stream smoke for gpt-5-mini.
 - CI: root `pnpm -s check` now exercises extension e2e coverage.
 - Hover summaries: hide tooltips on error pages, show only after the first streamed chunk, avoid recycled-anchor mismatches, add hover debug logging when extended logging is enabled, and suppress native title tooltips while hover summaries are visible.
 - Chrome extension: avoid Chrome “Local network access” prompts for hover summaries by proxying localhost daemon calls through the background service worker.
