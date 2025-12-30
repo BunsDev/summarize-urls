@@ -70,14 +70,7 @@ describe('cli --video-mode transcript', () => {
     const stderr = collectStream({ isTTY: true })
 
     await runCli(
-      [
-        '--extract',
-        '--metrics',
-        'off',
-        '--video-mode',
-        'transcript',
-        'https://example.com/page',
-      ],
+      ['--extract', '--metrics', 'off', '--video-mode', 'transcript', 'https://example.com/page'],
       {
         env: {},
         fetch: vi.fn() as unknown as typeof fetch,

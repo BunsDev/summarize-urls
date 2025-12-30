@@ -78,7 +78,6 @@ export function createDaemonUrlFlowContext(args: DaemonUrlFlowContextArgs): UrlF
 
   const languageExplicitlySet = typeof languageRaw === 'string' && Boolean(languageRaw.trim())
 
-
   const { lengthArg } = resolveSummaryLength(lengthRaw)
   const resolvedOverrides: RunOverrides = overrides ?? {
     firecrawlMode: null,

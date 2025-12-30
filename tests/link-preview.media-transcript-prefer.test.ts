@@ -59,8 +59,8 @@ describe('link preview media transcript preference', () => {
   it('passes media transcript mode through for HTML pages', async () => {
     mocks.resolveTranscriptForLink.mockClear()
     const html = '<!doctype html><html><head><title>Ok</title></head><body>Hello</body></html>'
-    const fetchMock = vi.fn(async () =>
-      new Response(html, { status: 200, headers: { 'content-type': 'text/html' } })
+    const fetchMock = vi.fn(
+      async () => new Response(html, { status: 200, headers: { 'content-type': 'text/html' } })
     )
 
     await fetchLinkContent(

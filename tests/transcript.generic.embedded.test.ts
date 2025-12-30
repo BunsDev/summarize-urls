@@ -28,16 +28,12 @@ describe('generic transcript provider (embedded captions)', () => {
       </html>
     `
 
-    const fetchMock = vi.fn(async () =>
-      new Response(
-        [
-          'WEBVTT',
-          '',
-          '00:00:00.000 --> 00:00:01.000',
-          'Hello world.',
-        ].join('\n'),
-        { status: 200, headers: { 'content-type': 'text/vtt' } }
-      )
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(['WEBVTT', '', '00:00:00.000 --> 00:00:01.000', 'Hello world.'].join('\n'), {
+          status: 200,
+          headers: { 'content-type': 'text/vtt' },
+        })
     )
 
     const result = await fetchTranscript(

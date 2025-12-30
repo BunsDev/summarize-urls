@@ -849,13 +849,10 @@ export default defineBackground(() => {
             daemonRecovery.clearPending()
             break
           case 'panel:summarize':
-            void summarizeActiveTab(
-              (msg as { refresh?: boolean }).refresh ? 'refresh' : 'manual',
-              {
-                refresh: Boolean((msg as { refresh?: boolean }).refresh),
-                inputMode: (msg as { inputMode?: 'page' | 'video' }).inputMode,
-              }
-            )
+            void summarizeActiveTab((msg as { refresh?: boolean }).refresh ? 'refresh' : 'manual', {
+              refresh: Boolean((msg as { refresh?: boolean }).refresh),
+              inputMode: (msg as { inputMode?: 'page' | 'video' }).inputMode,
+            })
             break
           case 'panel:chat':
             void (async () => {

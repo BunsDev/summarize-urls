@@ -39,7 +39,9 @@ function resolveMediaDurationSeconds(): number | null {
 function detectMediaInfo(): { hasVideo: boolean; hasAudio: boolean; hasCaptions: boolean } {
   const hasVideo = Boolean(document.querySelector('video'))
   const hasAudio = Boolean(document.querySelector('audio'))
-  const hasCaptions = Boolean(document.querySelector('track[kind="captions"], track[kind="subtitles"]'))
+  const hasCaptions = Boolean(
+    document.querySelector('track[kind="captions"], track[kind="subtitles"]')
+  )
   return { hasVideo, hasAudio, hasCaptions }
 }
 

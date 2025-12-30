@@ -449,7 +449,12 @@ function SourcePicker(props: SourcePickerProps) {
   if ('width' in positionerStyle) delete positionerStyle.width
   if ('maxWidth' in positionerStyle) delete positionerStyle.maxWidth
   const content = (
-    <div className="pickerPositioner" data-picker="source" {...positionerProps} style={positionerStyle}>
+    <div
+      className="pickerPositioner"
+      data-picker="source"
+      {...positionerProps}
+      style={positionerStyle}
+    >
       <div className="pickerContent" {...api.getContentProps()}>
         <div className="pickerList" {...api.getListProps()}>
           {sourceItems.map((item) => (

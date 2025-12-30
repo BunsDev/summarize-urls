@@ -1,9 +1,9 @@
 import { load } from 'cheerio'
 import { isWhisperCppReady } from '../../../transcription/whisper.js'
-import { isDirectMediaUrl } from '../../url.js'
 import { isTwitterStatusUrl } from '../../link-preview/content/twitter-utils.js'
-import { jsonTranscriptToPlainText, vttToPlainText } from '../parse.js'
+import { isDirectMediaUrl } from '../../url.js'
 import { normalizeTranscriptText } from '../normalize.js'
+import { jsonTranscriptToPlainText, vttToPlainText } from '../parse.js'
 import type { ProviderContext, ProviderFetchOptions, ProviderResult } from '../types.js'
 
 export const canHandle = (): boolean => true
@@ -38,7 +38,7 @@ export const fetchTranscript = async (
 
   const mediaUrl =
     options.mediaTranscriptMode === 'prefer'
-      ? embedded?.mediaUrl ?? (isDirectMediaUrl(context.url) ? context.url : null)
+      ? (embedded?.mediaUrl ?? (isDirectMediaUrl(context.url) ? context.url : null))
       : null
 
   if (mediaUrl && options.mediaTranscriptMode === 'prefer') {
@@ -219,7 +219,7 @@ function resolveOgMediaUrl(
   kind: 'video' | 'audio'
 ): string | null {
   const meta = $(
-    `meta[property=\"og:${kind}\"], meta[property=\"og:${kind}:url\"], meta[property=\"og:${kind}:secure_url\"], meta[name=\"og:${kind}\"], meta[name=\"og:${kind}:url\"], meta[name=\"og:${kind}:secure_url\"]`
+    `meta[property="og:${kind}"], meta[property="og:${kind}:url"], meta[property="og:${kind}:secure_url"], meta[name="og:${kind}"], meta[name="og:${kind}:url"], meta[name="og:${kind}:secure_url"]`
   )
     .first()
     .attr('content')

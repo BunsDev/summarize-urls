@@ -1,5 +1,5 @@
-import { TRANSCRIPTION_TIMEOUT_MS } from './constants.js'
 import { jsonTranscriptToPlainText, vttToPlainText } from '../../parse.js'
+import { TRANSCRIPTION_TIMEOUT_MS } from './constants.js'
 
 export function looksLikeRssOrAtomFeed(xml: string): boolean {
   const head = xml.slice(0, 4096).trimStart().toLowerCase()

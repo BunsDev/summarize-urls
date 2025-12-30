@@ -21,15 +21,12 @@ const LIVE = process.env.SUMMARIZE_LIVE_TEST === '1'
     })
 
     const url = 'https://www.destroyallsoftware.com/talks/the-birth-and-death-of-javascript'
-    await runCli(
-      ['--json', '--extract', '--video-mode', 'transcript', '--timeout', '20s', url],
-      {
-        env: { ...process.env },
-        fetch: globalThis.fetch.bind(globalThis),
-        stdout,
-        stderr,
-      }
-    )
+    await runCli(['--json', '--extract', '--video-mode', 'transcript', '--timeout', '20s', url], {
+      env: { ...process.env },
+      fetch: globalThis.fetch.bind(globalThis),
+      stdout,
+      stderr,
+    })
 
     const parsed = JSON.parse(stdoutText) as {
       extracted: {
