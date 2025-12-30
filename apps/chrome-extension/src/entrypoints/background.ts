@@ -2,7 +2,7 @@ import { shouldPreferUrlMode } from '@steipete/summarize-core/content/url'
 import { defineBackground } from 'wxt/utils/define-background'
 import { parseSseEvent } from '../../../../src/shared/sse-events.js'
 import { buildChatPageContent } from '../lib/chat-context'
-import { buildSummarizeRequestBody } from '../lib/daemon-payload'
+import { buildDaemonRequestBody, buildSummarizeRequestBody } from '../lib/daemon-payload'
 import { createDaemonRecovery, isDaemonUnreachableError } from '../lib/daemon-recovery'
 import { loadSettings, patchSettings } from '../lib/settings'
 import { parseSseStream } from '../lib/sse'
@@ -722,8 +722,18 @@ export default defineBackground(() => {
     return active?.id ?? null
   }
 
-  const runHoverSummarize = async (tabId: number, msg: HoverToBg & { type: 'hover:summarize' }) => {
+  const runHoverSummarize = async (
+    tabId: number,
+    msg: HoverToBg & { type: 'hover:summarize' },
+    opts?: { onStart?: (result: { ok: boolean; error?: string }) => void }
+  ) => {
     abortHoverForTab(tabId)
+    let didNotifyStart = false
+    const notifyStart = (result: { ok: boolean; error?: string }) => {
+      if (didNotifyStart) return
+      didNotifyStart = true
+      opts?.onStart?.(result)
+    }
 
     // Keep localhost daemon calls out of content-script/page context to avoid Chrome’s “Local network access”
     // prompt per-origin. Background SW owns `fetch("http://127.0.0.1:8787/...")` for hover summaries.
@@ -743,6 +753,7 @@ export default defineBackground(() => {
     }
     const token = msg.token?.trim() || settings.token.trim()
     if (!token) {
+      notifyStart({ ok: false, error: 'Setup required (missing token)' })
       await sendHover(tabId, {
         type: 'hover:error',
         requestId: msg.requestId,
@@ -782,6 +793,7 @@ export default defineBackground(() => {
       }
 
       if (!isStillActive()) return
+      notifyStart({ ok: true })
       logHover('stream-start', { tabId, requestId: msg.requestId, url: msg.url, runId: json.id })
 
       const streamRes = await fetch(`http://127.0.0.1:8787/v1/summarize/${json.id}/events`, {
@@ -815,6 +827,10 @@ export default defineBackground(() => {
       await sendHover(tabId, { type: 'hover:done', requestId: msg.requestId, url: msg.url })
     } catch (err) {
       if (!isStillActive()) return
+      notifyStart({
+        ok: false,
+        error: friendlyFetchError(err, 'Hover summarize failed'),
+      })
       logHover('error', {
         tabId,
         requestId: msg.requestId,
@@ -828,6 +844,7 @@ export default defineBackground(() => {
         message: friendlyFetchError(err, 'Hover summarize failed'),
       })
     } finally {
+      notifyStart({ ok: false, error: 'Hover summarize aborted' })
       abortHoverForTab(tabId, msg.requestId)
     }
   }
@@ -1022,9 +1039,11 @@ export default defineBackground(() => {
             return
           }
 
-          void runHoverSummarize(tabId, msg)
+          const startResult = await new Promise<{ ok: boolean; error?: string }>((resolve) => {
+            void runHoverSummarize(tabId, msg, { onStart: resolve })
+          })
           try {
-            sendResponse({ ok: true })
+            sendResponse(startResult)
           } catch {
             // ignore
           }
