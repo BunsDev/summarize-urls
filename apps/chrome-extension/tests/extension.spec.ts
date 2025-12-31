@@ -283,6 +283,19 @@ async function seedSettings(harness: ExtensionHarness, settings: Record<string, 
   }, settings)
 }
 
+async function getSettings(harness: ExtensionHarness) {
+  const background =
+    harness.context.serviceWorkers()[0] ??
+    (await harness.context.waitForEvent('serviceworker', { timeout: 15_000 }))
+  return background.evaluate(async () => {
+    return await new Promise<Record<string, unknown>>((resolve) => {
+      chrome.storage.local.get('settings', (result) => {
+        resolve((result?.settings as Record<string, unknown>) ?? {})
+      })
+    })
+  })
+}
+
 async function getActiveTabUrl(harness: ExtensionHarness) {
   const background =
     harness.context.serviceWorkers()[0] ??
@@ -1317,6 +1330,106 @@ test('options keeps custom model selected while presets refresh', async () => {
 
     await expect(page.locator('#modelPreset')).toHaveValue('custom')
     await expect(page.locator('#modelCustom')).toBeVisible()
+    assertNoErrors(harness)
+  } finally {
+    await closeExtension(harness.context, harness.userDataDir)
+  }
+})
+
+test('options persists automation toggle without save', async () => {
+  const harness = await launchExtension()
+
+  try {
+    await seedSettings(harness, { automationEnabled: false })
+    const page = await openExtensionPage(harness, 'options.html', '#pickersRoot')
+
+    const toggle = page.locator('#automationToggle .checkboxRoot')
+    await toggle.click()
+
+    await expect
+      .poll(async () => {
+        const settings = await getSettings(harness)
+        return settings.automationEnabled
+      })
+      .toBe(true)
+
+    await page.close()
+
+    const reopened = await openExtensionPage(harness, 'options.html', '#pickersRoot')
+    const checked = await reopened.evaluate(() => {
+      const input = document.querySelector('#automationToggle input') as HTMLInputElement | null
+      return input?.checked ?? false
+    })
+    expect(checked).toBe(true)
+    assertNoErrors(harness)
+  } finally {
+    await closeExtension(harness.context, harness.userDataDir)
+  }
+})
+
+test('options disables automation permissions button when granted', async () => {
+  const harness = await launchExtension()
+
+  try {
+    await seedSettings(harness, { automationEnabled: true })
+    const page = await harness.context.newPage()
+    trackErrors(page, harness.pageErrors, harness.consoleErrors)
+    await page.addInitScript(() => {
+      Object.defineProperty(chrome, 'permissions', {
+        configurable: true,
+        value: {
+          contains: async () => true,
+          request: async () => true,
+        },
+      })
+      Object.defineProperty(chrome, 'userScripts', {
+        configurable: true,
+        value: {},
+      })
+    })
+    await page.goto(`chrome-extension://${harness.extensionId}/options.html`, {
+      waitUntil: 'domcontentloaded',
+    })
+    await page.waitForSelector('#pickersRoot')
+
+    await expect(page.locator('#automationPermissions')).toBeDisabled()
+    await expect(page.locator('#automationPermissions')).toHaveText('Automation permissions granted')
+    await expect(page.locator('#userScriptsNotice')).toBeHidden()
+    assertNoErrors(harness)
+  } finally {
+    await closeExtension(harness.context, harness.userDataDir)
+  }
+})
+
+test('options shows user scripts guidance when unavailable', async () => {
+  const harness = await launchExtension()
+
+  try {
+    await seedSettings(harness, { automationEnabled: true })
+    const page = await harness.context.newPage()
+    trackErrors(page, harness.pageErrors, harness.consoleErrors)
+    await page.addInitScript(() => {
+      Object.defineProperty(chrome, 'permissions', {
+        configurable: true,
+        value: {
+          contains: async () => false,
+          request: async () => true,
+        },
+      })
+      Object.defineProperty(chrome, 'userScripts', {
+        configurable: true,
+        value: undefined,
+      })
+    })
+    await page.goto(`chrome-extension://${harness.extensionId}/options.html`, {
+      waitUntil: 'domcontentloaded',
+    })
+    await page.waitForSelector('#pickersRoot')
+
+    await expect(page.locator('#automationPermissions')).toBeEnabled()
+    await expect(page.locator('#automationPermissions')).toHaveText('Enable automation permissions')
+    await expect(page.locator('#userScriptsNotice')).toBeVisible()
+    await expect(page.locator('#userScriptsNotice')).toContainText('User Scripts API is not available')
     assertNoErrors(harness)
   } finally {
     await closeExtension(harness.context, harness.userDataDir)

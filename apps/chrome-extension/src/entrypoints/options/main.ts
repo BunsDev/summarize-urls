@@ -6,7 +6,7 @@ import {
   saveSkill,
 } from '../../automation/skills-store'
 import { readPresetOrCustomValue, resolvePresetOrCustom } from '../../lib/combo'
-import { defaultSettings, loadSettings, saveSettings } from '../../lib/settings'
+import { defaultSettings, loadSettings, patchSettings, saveSettings } from '../../lib/settings'
 import { applyTheme, type ColorMode, type ColorScheme } from '../../lib/theme'
 import { mountCheckbox } from '../../ui/zag-checkbox'
 import { mountOptionsPickers } from './pickers'
@@ -490,7 +490,8 @@ const updateAutomationToggle = () => {
 const handleAutomationToggleChange = (checked: boolean) => {
   automationEnabledValue = checked
   updateAutomationToggle()
-  void updateUserScriptsNotice()
+  void patchSettings({ automationEnabled: automationEnabledValue })
+  void updateAutomationPermissionsUi()
 }
 const automationToggle = mountCheckbox(automationToggleRoot, {
   id: 'options-automation',
@@ -499,17 +500,31 @@ const automationToggle = mountCheckbox(automationToggleRoot, {
   onCheckedChange: handleAutomationToggleChange,
 })
 
-async function updateUserScriptsNotice() {
+async function resolveUserScriptsStatus() {
+  const hasPermission = await chrome.permissions?.contains?.({
+    permissions: ['userScripts'],
+  })
+  const apiAvailable = Boolean(chrome.userScripts)
+  return {
+    hasPermission: Boolean(hasPermission),
+    apiAvailable,
+  }
+}
+
+async function updateAutomationPermissionsUi() {
+  const { hasPermission, apiAvailable } = await resolveUserScriptsStatus()
+
+  automationPermissionsBtn.disabled = !chrome.permissions || (hasPermission && apiAvailable)
+  automationPermissionsBtn.textContent = hasPermission
+    ? 'Automation permissions granted'
+    : 'Enable automation permissions'
+
   if (!automationEnabledValue) {
     userScriptsNoticeEl.hidden = true
     return
   }
 
-  const hasPermission = await chrome.permissions?.contains?.({
-    permissions: ['userScripts'],
-  })
-
-  if (chrome.userScripts) {
+  if (apiAvailable) {
     userScriptsNoticeEl.hidden = true
     return
   }
@@ -528,13 +543,16 @@ async function updateUserScriptsNotice() {
 async function requestAutomationPermissions() {
   if (!chrome.permissions) return
   try {
-    await chrome.permissions.request({
+    const ok = await chrome.permissions.request({
       permissions: ['userScripts'],
     })
+    if (!ok) {
+      flashStatus('Permission request denied')
+    }
   } catch {
     // ignore
   }
-  await updateUserScriptsNotice()
+  await updateAutomationPermissionsUi()
 }
 
 automationPermissionsBtn.addEventListener('click', () => {
@@ -1025,7 +1043,7 @@ async function load() {
   applyTheme({ scheme: s.colorScheme, mode: s.colorMode })
   updateAdvancedVisibility()
   await loadSkills()
-  await updateUserScriptsNotice()
+  await updateAutomationPermissionsUi()
 }
 
 let refreshTimer = 0
