@@ -4,18 +4,24 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="color-scheme" content="dark light" />
-    <title>summarize — Link → clean text → summary.</title>
-    <meta name="description" content="Link → clean text → summary. A CLI that turns URLs into clean text and fast summaries." />
+    <title>summarize — CLI + Chrome Side Panel for fast summaries</title>
+    <meta
+      name="description"
+      content="Summarize is a fast CLI and a Chrome Side Panel extension for clean extraction and sharp summaries."
+    />
     <link rel="canonical" href="https://summarize.sh/" />
     <meta property="og:title" content="summarize" />
-    <meta property="og:description" content="Link → clean text → summary." />
+    <meta property="og:description" content="Fast summaries, in the CLI and the Chrome Side Panel." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://summarize.sh/" />
-    <meta name="theme-color" content="#0b1018" />
+    <meta name="theme-color" content="#0b0f12" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./assets/site.css" />
   </head>
   <body>
@@ -33,99 +39,157 @@
       </header>
 
       <section class="hero">
-        <div class="hero__card reveal">
-          <div class="hero__grid">
-            <div class="hero__inner">
-              <p class="kicker">CLI</p>
-              <h1 class="title">Link → clean text → summary.</h1>
-              <p class="lede">
-                A pragmatic pipeline for the web: <strong>extract</strong> the good stuff, <strong>sanitize</strong> it,
-                then <strong>summarize</strong> with your model of choice. Podcast episode pages included. Plus a Chrome
-                side panel extension when you want it in-browser.
-              </p>
-
-              <div class="pillRow">
-                <span class="pill"><span class="pill__dot" aria-hidden="true"></span> Website extraction</span>
-                <span class="pill"><span class="pill__dot" aria-hidden="true" style="background: var(--accent2)"></span> YouTube transcripts</span>
-                <span class="pill"><span class="pill__dot" aria-hidden="true" style="background: var(--accent3)"></span> Podcast compatibility</span>
-                <span class="pill"><span class="pill__dot" aria-hidden="true" style="background: var(--accent3)"></span> JSON + metrics</span>
-                <span class="pill"><span class="pill__dot" aria-hidden="true" style="background: var(--accent2)"></span> Chrome extension</span>
+        <div class="hero__frame reveal">
+          <div class="hero__copy">
+            <p class="kicker">CLI + Chrome Extension</p>
+            <h1 class="title">Summaries that live where you work.</h1>
+            <p class="lede">
+              Summarize turns links, files, and media into sharp summaries with a real extraction pipeline.
+              Use the <strong>CLI</strong> for automation or the <strong>Chrome Side Panel</strong> for one-click
+              summaries of the current tab.
+            </p>
+            <div class="ctaRow">
+              <a class="btn btn--primary" href="./docs/index.html">Docs</a>
+              <a class="btn" href="https://github.com/steipete/summarize">GitHub</a>
+            </div>
+            <div class="quickRow">
+              <div class="quickRow__label">Quickstart</div>
+              <div class="quickRow__code">
+                <code id="install">npm i -g @steipete/summarize</code>
+                <code id="run">summarize "https://example.com/article"</code>
               </div>
-
-              <div class="ctaRow">
-                <a class="btn btn--primary" href="./docs/index.html" aria-label="Read docs">
-                  <svg class="btn__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M6 4h9l3 3v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.5"/>
-                    <path d="M15 4v4h4" stroke="currentColor" stroke-width="1.5"/>
-                  </svg>
-                  Docs
-                </a>
-                <a class="btn" href="https://github.com/steipete/summarize">
-                  <svg class="btn__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.77.6-3.35-1.18-3.35-1.18-.45-1.14-1.1-1.45-1.1-1.45-.9-.62.07-.6.07-.6 1 .07 1.52 1.02 1.52 1.02.9 1.52 2.36 1.08 2.94.82.09-.64.35-1.08.63-1.33-2.2-.25-4.52-1.1-4.52-4.88 0-1.08.39-1.96 1.02-2.65-.1-.25-.44-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.46 9.46 0 0 1 5 0c1.9-1.29 2.75-1.02 2.75-1.02.54 1.38.2 2.4.1 2.65.64.69 1.02 1.57 1.02 2.65 0 3.79-2.33 4.63-4.55 4.88.36.31.68.92.68 1.86v2.76c0 .26.18.58.69.48A10 10 0 0 0 12 2Z" fill="currentColor" opacity=".9"/>
-                  </svg>
-                  Repo
-                </a>
+              <div class="quickRow__actions">
+                <button class="btn" data-copy="#install">Copy install</button>
+                <button class="btn" data-copy="#run">Copy run</button>
               </div>
             </div>
+          </div>
 
-            <aside class="codeCard">
-              <p class="kicker">Quickstart</p>
-
-              <div class="terminal">
-                <div class="terminal__bar" aria-hidden="true">
-                  <span class="terminal__dot terminal__dot--a"></span>
-                  <span class="terminal__dot terminal__dot--b"></span>
-                  <span class="terminal__dot terminal__dot--c"></span>
-                </div>
-                <pre><code id="install">npm i -g @steipete/summarize</code>
-<code id="run">summarize "https://example.com/article"</code></pre>
-              </div>
-
-              <div class="copyRow">
-                <span class="hint">Install, then summarize a URL.</span>
-                <div class="ctaRow" style="margin-top:0">
-                  <button class="btn" data-copy="#install">Copy install</button>
-                  <button class="btn" data-copy="#run">Copy run</button>
-                </div>
-              </div>
-            </aside>
+          <div class="hero__visual">
+            <figure class="shot shot--cli">
+              <img src="./assets/summarize-cli.png" alt="Summarize CLI output" loading="lazy" />
+              <figcaption>CLI: streaming summaries in the terminal.</figcaption>
+            </figure>
+            <figure class="shot shot--ext">
+              <img src="./assets/summarize-extension.png" alt="Summarize Chrome extension side panel" loading="lazy" />
+              <figcaption>Extension: a live Side Panel for the active tab.</figcaption>
+            </figure>
           </div>
         </div>
       </section>
 
-      <section class="grid" aria-label="Features">
-        <div class="card reveal">
-          <h2>Extraction that’s not naive</h2>
-          <p>HTML → normalized text, with fallbacks when a site fights back.</p>
-          <div class="small">Cheerio + sanitization + optional Firecrawl</div>
+      <section class="productGrid" aria-label="Products">
+        <article class="productCard reveal" id="cli">
+          <div class="productCard__head">
+            <span class="badge">CLI</span>
+            <h2>Fast summaries, scripted or interactive.</h2>
+          </div>
+          <p>
+            Built for automation: extract clean text, summarize with your model, and output JSON or Markdown.
+            Works with URLs, PDFs, images, audio/video, YouTube, and podcasts.
+          </p>
+          <ul class="list">
+            <li><strong>Extract + summarize</strong> with Firecrawl fallback.</li>
+            <li><strong>Media pipeline</strong> with transcript-first flow and Whisper fallback.</li>
+            <li><strong>Scriptable output</strong> via <code>--json</code>, <code>--extract</code>, <code>--metrics</code>.</li>
+          </ul>
+          <div class="cardCode">
+            <pre><code>summarize "https://example.com" --length long
+summarize "https://youtu.be/..." --youtube auto
+summarize "/path/report.pdf" --model google/gemini-3-flash-preview</code></pre>
+          </div>
+          <div class="ctaRow">
+            <a class="btn btn--ghost" href="./docs/cli.html">CLI docs</a>
+            <a class="btn" href="./docs/config.html">Config</a>
+          </div>
+        </article>
+
+        <article class="productCard reveal" id="extension">
+          <div class="productCard__head">
+            <span class="badge badge--alt">Chrome Extension</span>
+            <h2>Summaries in the Side Panel, one click away.</h2>
+          </div>
+          <p>
+            A real Chrome Side Panel with a tiny local daemon. It streams Markdown summaries for the active tab,
+            with auto-summary on navigation.
+          </p>
+          <ol class="steps">
+            <li>Install the CLI + daemon.</li>
+            <li>Load the unpacked extension.</li>
+            <li>Open Side Panel and connect with the token.</li>
+          </ol>
+          <div class="callout">
+            <strong>Runs locally</strong> on your machine. The daemon is localhost-only and token-protected.
+          </div>
+          <div class="ctaRow">
+            <a class="btn btn--ghost" href="./docs/chrome-extension.html">Extension docs</a>
+            <a class="btn" href="https://github.com/steipete/summarize/releases/latest">Latest release</a>
+          </div>
+        </article>
+      </section>
+
+      <section class="capGrid" aria-label="Capabilities">
+        <div class="capCard reveal">
+          <span class="capCard__eyebrow">Extraction</span>
+          <h3>HTML -> clean text -> summary</h3>
+          <p>Readability, markitdown, and Firecrawl fallback when sites fight back.</p>
         </div>
-        <div class="card reveal">
-          <h2>Podcast-friendly</h2>
-          <p>Apple/Spotify/RSS episode pages, plus embedded YouTube podcasts.</p>
-          <div class="small">Prefers published transcripts; Whisper fallback</div>
+        <div class="capCard reveal">
+          <span class="capCard__eyebrow">Media</span>
+          <h3>Podcast + YouTube aware</h3>
+          <p>Prefers published transcripts, then Whisper when needed.</p>
         </div>
-        <div class="card reveal">
-          <h2>YouTube transcripts, without drama</h2>
-          <p>Pull captions via multiple paths so “missing transcript” becomes rare.</p>
-          <div class="small">Website vs YouTube modes</div>
+        <div class="capCard reveal">
+          <span class="capCard__eyebrow">Models</span>
+          <h3>Provider-agnostic</h3>
+          <p>OpenAI, Anthropic, Google, xAI, Z.AI, OpenRouter. Auto or pinned.</p>
         </div>
-        <div class="card reveal">
-          <h2>Built for pipelines</h2>
-          <p><code>--extract</code>, <code>--json</code>, and <code>--metrics</code> make it scriptable.</p>
-          <div class="small">Compose it with your own tools</div>
+        <div class="capCard reveal">
+          <span class="capCard__eyebrow">Outputs</span>
+          <h3>Readable + scriptable</h3>
+          <p>Streaming TTY output, ANSI Markdown, JSON diagnostics, and metrics.</p>
         </div>
-        <div class="card reveal">
-          <h2>Provider-agnostic LLMs</h2>
-          <p>OpenAI, xAI, Gemini — use what you’ve got, pin what you need.</p>
-          <div class="small">Control via <code>--model</code> + env vars</div>
+      </section>
+
+      <section class="flow">
+        <div class="flow__card reveal">
+          <h2>How it works</h2>
+          <div class="flow__steps">
+            <div class="flowStep">
+              <span class="flowStep__num">01</span>
+              <div>
+                <h4>Fetch + extract</h4>
+                <p>Pull the source, clean HTML, normalize, or convert to Markdown.</p>
+              </div>
+            </div>
+            <div class="flowStep">
+              <span class="flowStep__num">02</span>
+              <div>
+                <h4>Transcript when needed</h4>
+                <p>Use published transcripts, then Whisper fallback for media.</p>
+              </div>
+            </div>
+            <div class="flowStep">
+              <span class="flowStep__num">03</span>
+              <div>
+                <h4>Summarize + format</h4>
+                <p>LLM output, streaming in the CLI or Side Panel, with metrics.</p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="card reveal">
-          <h2>Chrome side panel</h2>
-          <p>Summarize the active tab without leaving your browser.</p>
-          <div class="small">
-            Companion extension for the CLI. Download from the
-            <a href="https://github.com/steipete/summarize/releases/latest">latest GitHub release</a>.
+      </section>
+
+      <section class="more">
+        <div class="more__card reveal">
+          <h2>More</h2>
+          <div class="more__grid">
+            <a class="moreLink" href="./docs/website.html">Website extraction</a>
+            <a class="moreLink" href="./docs/youtube.html">YouTube transcripts</a>
+            <a class="moreLink" href="./docs/media.html">Media pipeline</a>
+            <a class="moreLink" href="./docs/model-auto.html">Auto model rules</a>
+            <a class="moreLink" href="./docs/llm.html">Model + key setup</a>
+            <a class="moreLink" href="./docs/config.html">Config schema</a>
           </div>
         </div>
       </section>
