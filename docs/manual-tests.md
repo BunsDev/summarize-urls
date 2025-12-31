@@ -45,6 +45,8 @@ Tip: use `--verbose` to see model attempts + the chosen model.
 
 - YouTube:
   - `summarize https://www.youtube.com/watch?v=dQw4w9WgXcQ --max-output-tokens 200`
+- YouTube summary w/ timestamps (expect `[mm:ss]` in output):
+  - `summarize --timestamps --youtube web --length short https://www.youtube.com/watch?v=I845O57ZSy4`
 - Local video understanding (requires Gemini video-capable model; otherwise expect an error or transcript-only behavior depending on input):
   - `summarize ./path/to/video.mp4 --max-output-tokens 200`
 
