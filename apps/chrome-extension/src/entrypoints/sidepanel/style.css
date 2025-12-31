@@ -1647,6 +1647,10 @@ button.setup__pill.isActive {
   width: 100%;
 }
 
+.chatContainer[hidden] {
+  display: none;
+}
+
 .chatMessages {
   max-height: none;
   overflow: visible;
