@@ -3,7 +3,7 @@
  * Tests edge cases and error conditions to ensure robust error handling
  */
 
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Writable } from 'node:stream'
@@ -194,31 +194,35 @@ describe('Audio file error handling', () => {
     expect(mocks.streamSimple).toHaveBeenCalledTimes(0)
   })
 
-  it('handles file modification time edge cases (very old files)', async () => {
-    mocks.streamSimple.mockClear()
+   it('handles file modification time edge cases (very old files)', async () => {
+     mocks.streamSimple.mockClear()
 
-    const root = mkdtempSync(join(tmpdir(), 'summarize-audio-old-file-'))
-    const audioPath = join(root, 'old.mp3')
-    writeFileSync(audioPath, Buffer.from([0xff, 0xfb, 0x10, 0x00]))
+     const root = mkdtempSync(join(tmpdir(), 'summarize-audio-old-file-'))
+     const audioPath = join(root, 'old.mp3')
+     writeFileSync(audioPath, Buffer.from([0xff, 0xfb, 0x10, 0x00]))
 
-    const stdout = collectStream()
-    const stderr = collectStream()
+     // Set mtime to January 1, 2000 to test edge case of very old files
+     const oldDate = new Date('2000-01-01T00:00:00Z')
+     utimesSync(audioPath, oldDate, oldDate)
 
-    const run = () =>
-      runCli(['--model', 'openai/gpt-4o-mini', '--timeout', '2s', audioPath], {
-        env: { HOME: root }, // No transcription provider
-        fetch: vi.fn(async () => {
-          throw new Error('unexpected fetch')
-        }) as unknown as typeof fetch,
-        stdout: stdout.stream,
-        stderr: stderr.stream,
-      })
+     const stdout = collectStream()
+     const stderr = collectStream()
 
-    // Should handle old file mtimes gracefully
-    // (mtime collection should work regardless of file age)
-    await expect(run()).rejects.toThrow()
-    expect(mocks.streamSimple).toHaveBeenCalledTimes(0)
-  })
+     const run = () =>
+       runCli(['--model', 'openai/gpt-4o-mini', '--timeout', '2s', audioPath], {
+         env: { HOME: root }, // No transcription provider
+         fetch: vi.fn(async () => {
+           throw new Error('unexpected fetch')
+         }) as unknown as typeof fetch,
+         stdout: stdout.stream,
+         stderr: stderr.stream,
+       })
+
+     // Should handle old file mtimes gracefully
+     // (mtime collection should work regardless of file age)
+     await expect(run()).rejects.toThrow()
+     expect(mocks.streamSimple).toHaveBeenCalledTimes(0)
+   })
 
    it('properly formats error messages for unsupported audio codecs', async () => {
      mocks.streamSimple.mockClear()
