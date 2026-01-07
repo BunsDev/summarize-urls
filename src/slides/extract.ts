@@ -23,7 +23,9 @@ const FFMPEG_TIMEOUT_FALLBACK_MS = 300_000
 const YT_DLP_TIMEOUT_MS = 300_000
 const TESSERACT_TIMEOUT_MS = 120_000
 const DEFAULT_SLIDES_WORKERS = 8
-const DEFAULT_YT_DLP_FORMAT = 'best[height<=360]/best'
+const DEFAULT_SLIDES_SAMPLE_COUNT = 8
+const DEFAULT_YT_DLP_FORMAT_DETECT = 'best[height<=360]/best'
+const DEFAULT_YT_DLP_FORMAT_EXTRACT = 'bestvideo[height<=720]/best[height<=720]'
 
 function logSlides(message: string): void {
   console.log(`[summarize-slides] ${message}`)
@@ -43,12 +45,50 @@ function resolveSlidesWorkers(env: Record<string, string | undefined>): number {
   return Math.max(1, Math.min(16, Math.round(parsed)))
 }
 
-function resolveSlidesYtDlpFormat(env: Record<string, string | undefined>): string {
+function resolveSlidesRoiEnabled(env: Record<string, string | undefined>): boolean {
+  const raw = env.SUMMARIZE_SLIDES_ROI ?? env.SLIDES_ROI
+  if (raw == null) return false
+  if (typeof raw === 'boolean') return raw
+  const normalized = String(raw).trim().toLowerCase()
+  if (!normalized) return false
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false
+  return false
+}
+
+function resolveSlidesSampleCount(env: Record<string, string | undefined>): number {
+  const raw = env.SUMMARIZE_SLIDES_SAMPLES ?? env.SLIDES_SAMPLES
+  if (!raw) return DEFAULT_SLIDES_SAMPLE_COUNT
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_SLIDES_SAMPLE_COUNT
+  return Math.max(3, Math.min(12, Math.round(parsed)))
+}
+
+function resolveSlidesYtDlpDetectFormat(env: Record<string, string | undefined>): string {
   return (
     env.SUMMARIZE_SLIDES_YTDLP_FORMAT ??
     env.SLIDES_YTDLP_FORMAT ??
-    DEFAULT_YT_DLP_FORMAT
+    DEFAULT_YT_DLP_FORMAT_DETECT
   ).trim()
+}
+
+function resolveSlidesYtDlpExtractFormat(env: Record<string, string | undefined>): string {
+  return (
+    env.SUMMARIZE_SLIDES_YTDLP_FORMAT_EXTRACT ??
+    env.SLIDES_YTDLP_FORMAT_EXTRACT ??
+    DEFAULT_YT_DLP_FORMAT_EXTRACT
+  ).trim()
+}
+
+function resolveSlidesExtractStream(env: Record<string, string | undefined>): boolean {
+  const raw = env.SUMMARIZE_SLIDES_EXTRACT_STREAM ?? env.SLIDES_EXTRACT_STREAM
+  if (raw == null) return true
+  if (typeof raw === 'boolean') return raw
+  const normalized = String(raw).trim().toLowerCase()
+  if (!normalized) return true
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false
+  return true
 }
 
 type ExtractSlidesArgs = {
@@ -143,39 +183,108 @@ export async function extractSlidesForSource({
     logSlidesTiming('prepare output dir', prepareStartedAt)
   }
 
-  let inputPath = source.url
-  let cleanupTemp: (() => Promise<void>) | null = null
+  let detectionInputPath = source.url
+  let detectionCleanup: (() => Promise<void>) | null = null
+  let extractionCleanup: (() => Promise<void>) | null = null
 
   if (source.kind === 'youtube') {
     if (!ytDlpPath) {
       throw new Error('Slides for YouTube require yt-dlp (set YT_DLP_PATH or install yt-dlp).')
     }
     const downloadStartedAt = Date.now()
-    const format = resolveSlidesYtDlpFormat(env)
+    const format = resolveSlidesYtDlpDetectFormat(env)
     const downloaded = await downloadYoutubeVideo({ ytDlpPath, url: source.url, timeoutMs, format })
-    inputPath = downloaded.filePath
-    cleanupTemp = downloaded.cleanup
-    logSlidesTiming(`yt-dlp download (sequential, format=${format})`, downloadStartedAt)
+    detectionInputPath = downloaded.filePath
+    detectionCleanup = downloaded.cleanup
+    logSlidesTiming(`yt-dlp download (detect, format=${format})`, downloadStartedAt)
   }
 
   try {
     const ffmpegStartedAt = Date.now()
-    const { slides: rawSlides, autoTune } = await extractSlidesWithFfmpeg({
+    const detection = await detectSlideTimestamps({
       ffmpegPath: ffmpegBinary,
       ffprobePath: ffprobeBinary,
-      inputPath,
-      outputDir: slidesDir,
+      inputPath: detectionInputPath,
       sceneThreshold: settings.sceneThreshold,
       autoTuneThreshold: settings.autoTuneThreshold,
-      maxSlides: settings.maxSlides,
-      minDurationSeconds: settings.minDurationSeconds,
       llm,
       env,
       timeoutMs,
       warnings,
       workers,
+      sampleCount: resolveSlidesSampleCount(env),
     })
-    logSlidesTiming('ffmpeg scene-detect + extract-frames', ffmpegStartedAt)
+    logSlidesTiming('ffmpeg scene-detect', ffmpegStartedAt)
+
+    if (detection.timestamps.length === 0) {
+      throw new Error('No slides detected; try adjusting slide extraction settings.')
+    }
+
+    let extractionInputPath = detectionInputPath
+    if (source.kind === 'youtube') {
+      const extractionFormat = resolveSlidesYtDlpExtractFormat(env)
+      const detectionFormat = resolveSlidesYtDlpDetectFormat(env)
+      if (resolveSlidesExtractStream(env)) {
+        const streamStartedAt = Date.now()
+        try {
+          const streamUrl = await resolveYoutubeStreamUrl({
+            ytDlpPath,
+            url: source.url,
+            format: extractionFormat,
+            timeoutMs,
+          })
+          extractionInputPath = streamUrl
+          logSlidesTiming(
+            `yt-dlp stream url (extract, format=${extractionFormat})`,
+            streamStartedAt
+          )
+        } catch (error) {
+          warnings.push(`Failed to resolve stream URL: ${String(error)}`)
+        }
+      }
+
+      if (extractionInputPath === detectionInputPath && extractionFormat !== detectionFormat) {
+        const extractDownloadStartedAt = Date.now()
+        const extracted = await downloadYoutubeVideo({
+          ytDlpPath,
+          url: source.url,
+          timeoutMs,
+          format: extractionFormat,
+        })
+        extractionInputPath = extracted.filePath
+        extractionCleanup = extracted.cleanup
+          logSlidesTiming(
+            `yt-dlp download (extract, format=${extractionFormat})`,
+            extractDownloadStartedAt
+          )
+      }
+    }
+
+    const combined = mergeTimestamps(detection.timestamps, [], settings.minDurationSeconds)
+    const trimmed = applyMaxSlidesFilter(
+      combined.map((timestamp, index) => ({ index: index + 1, timestamp, imagePath: '' })),
+      settings.maxSlides,
+      warnings
+    )
+
+    const extractFramesStartedAt = Date.now()
+    const extractedSlides = await extractFramesAtTimestamps({
+      ffmpegPath: ffmpegBinary,
+      inputPath: extractionInputPath,
+      outputDir: slidesDir,
+      timestamps: trimmed.map((slide) => slide.timestamp),
+      timeoutMs,
+      workers,
+    })
+    const extractElapsedMs = logSlidesTiming(
+      `extract frames (count=${trimmed.length}, parallel=${workers})`,
+      extractFramesStartedAt
+    )
+    if (trimmed.length > 0) {
+      logSlides(`extract frames avgMsPerFrame=${Math.round(extractElapsedMs / trimmed.length)}`)
+    }
+
+    const rawSlides = applyMinDurationFilter(extractedSlides, settings.minDurationSeconds, warnings)
 
     const renameStartedAt = Date.now()
     const renamedSlides = await renameSlidesWithTimestamps(rawSlides, slidesDir)
@@ -203,7 +312,7 @@ export async function extractSlidesForSource({
       slidesDir,
       sceneThreshold: settings.sceneThreshold,
       autoTuneThreshold: settings.autoTuneThreshold,
-      autoTune,
+      autoTune: detection.autoTune,
       maxSlides: settings.maxSlides,
       minSlideDuration: settings.minDurationSeconds,
       ocrRequested: settings.ocr,
@@ -216,8 +325,11 @@ export async function extractSlidesForSource({
     logSlidesTiming('slides total', totalStartedAt)
     return result
   } finally {
-    if (cleanupTemp) {
-      await cleanupTemp()
+    if (extractionCleanup) {
+      await extractionCleanup()
+    }
+    if (detectionCleanup) {
+      await detectionCleanup()
     }
   }
 }
@@ -300,39 +412,59 @@ async function downloadYoutubeVideo({
   }
 }
 
-async function extractSlidesWithFfmpeg({
+async function resolveYoutubeStreamUrl({
+  ytDlpPath,
+  url,
+  timeoutMs,
+  format,
+}: {
+  ytDlpPath: string
+  url: string
+  timeoutMs: number
+  format: string
+}): Promise<string> {
+  const args = ['-f', format, '-g', url]
+  const output = await runProcessCapture({
+    command: ytDlpPath,
+    args,
+    timeoutMs: Math.max(timeoutMs, YT_DLP_TIMEOUT_MS),
+    errorLabel: 'yt-dlp',
+  })
+  const lines = output
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+  if (lines.length === 0) {
+    throw new Error('yt-dlp did not return a stream URL.')
+  }
+  return lines[0]
+}
+
+async function detectSlideTimestamps({
   ffmpegPath,
   ffprobePath,
   inputPath,
-  outputDir,
   sceneThreshold,
   autoTuneThreshold,
-  maxSlides,
-  minDurationSeconds,
   llm,
   env,
   timeoutMs,
   warnings,
   workers,
+  sampleCount,
 }: {
   ffmpegPath: string
   ffprobePath: string | null
   inputPath: string
-  outputDir: string
   sceneThreshold: number
   autoTuneThreshold: boolean
-  maxSlides: number
-  minDurationSeconds: number
   llm?: SlideLlmConfig | null
   env: Record<string, string | undefined>
   timeoutMs: number
   warnings: string[]
   workers: number
-}): Promise<{ slides: SlideImage[]; autoTune: SlideAutoTune }> {
-  const targetMinSlides = Math.min(maxSlides, 5)
-  const baseThreshold = sceneThreshold
-  const minThreshold = 0.05
-
+  sampleCount: number
+}): Promise<{ timestamps: number[]; autoTune: SlideAutoTune }> {
   const probeStartedAt = Date.now()
   const videoInfo = await probeVideoInfo({
     ffprobePath,
@@ -342,41 +474,11 @@ async function extractSlidesWithFfmpeg({
   })
   logSlidesTiming('ffprobe video info', probeStartedAt)
 
-  const baseEvaluation = await detectSceneTimestampsAdaptive({
-    ffmpegPath,
-    inputPath,
-    threshold: baseThreshold,
-    minThreshold,
-    targetMinSlides,
-    timeoutMs,
-    crop: null,
-    warnings,
-    durationSeconds: videoInfo.durationSeconds,
-    workers,
-  })
-
-  let chosenThreshold = baseEvaluation.threshold
-  let sceneTimestamps = baseEvaluation.timestamps
-  let autoTune: SlideAutoTune =
-    autoTuneThreshold && chosenThreshold !== baseThreshold
-      ? {
-          enabled: true,
-          chosenThreshold,
-          confidence: baseEvaluation.confidence,
-          strategy: 'adaptive',
-          roi: null,
-        }
-      : {
-          enabled: false,
-          chosenThreshold,
-          confidence: baseEvaluation.confidence,
-          strategy: 'none',
-          roi: null,
-        }
-
-  if (autoTuneThreshold && sceneTimestamps.length === 0) {
+  let roi: SlideRoi | null = null
+  let crop: CropRect | null = null
+  if (autoTuneThreshold && resolveSlidesRoiEnabled(env)) {
     const roiStartedAt = Date.now()
-    const roi = await detectSlideRoiWithLlm({
+    roi = await detectSlideRoiWithLlm({
       ffmpegPath,
       inputPath,
       videoInfo,
@@ -386,67 +488,89 @@ async function extractSlidesWithFfmpeg({
     })
     logSlidesTiming('roi detect (llm)', roiStartedAt)
     if (roi && videoInfo.width && videoInfo.height) {
-      const crop = resolveCropFromRoi(roi, videoInfo)
-      if (crop) {
-        const roiEvaluation = await detectSceneTimestampsAdaptive({
-          ffmpegPath,
-          inputPath,
-          threshold: baseThreshold,
-          minThreshold,
-          targetMinSlides,
-          timeoutMs,
-          crop,
-          warnings,
-          durationSeconds: videoInfo.durationSeconds,
-          workers,
-        })
-        if (roiEvaluation.confidence >= baseEvaluation.confidence + 0.05) {
-          chosenThreshold = roiEvaluation.threshold
-          sceneTimestamps = roiEvaluation.timestamps
-          autoTune = {
-            enabled: autoTuneThreshold,
-            chosenThreshold,
-            confidence: roiEvaluation.confidence,
-            strategy: 'llm-roi',
-            roi,
-          }
-        } else {
-          autoTune.roi = roi
-        }
+      crop = resolveCropFromRoi(roi, videoInfo)
+      if (!crop) {
+        warnings.push('LLM ROI was rejected; falling back to full-frame detection.')
       }
     }
   }
 
-  if (autoTuneThreshold && chosenThreshold !== baseThreshold) {
-    warnings.push(
-      `Auto-tuned scene threshold from ${baseThreshold} to ${chosenThreshold} (detected ${sceneTimestamps.length} scenes)`
-    )
-  }
-
-  const combined = mergeTimestamps(sceneTimestamps, [], minDurationSeconds)
-  const trimmed = applyMaxSlidesFilter(
-    combined.map((timestamp, index) => ({ index: index + 1, timestamp, imagePath: '' })),
-    maxSlides,
-    warnings
-  )
-  const extractFramesStartedAt = Date.now()
-  const extracted = await extractFramesAtTimestamps({
+  const calibration = await calibrateSceneThreshold({
     ffmpegPath,
     inputPath,
-    outputDir,
-    timestamps: trimmed.map((slide) => slide.timestamp),
+    crop,
+    durationSeconds: videoInfo.durationSeconds,
+    sampleCount,
     timeoutMs,
+  })
+
+  const baseThreshold = sceneThreshold
+  const calibratedThreshold = calibration.threshold
+  const chosenThreshold = autoTuneThreshold ? calibratedThreshold : baseThreshold
+  if (autoTuneThreshold && chosenThreshold !== baseThreshold) {
+    warnings.push(`Auto-tuned scene threshold from ${baseThreshold} to ${chosenThreshold}`)
+  }
+
+  const segments = buildSegments(videoInfo.durationSeconds, workers)
+  const detectStartedAt = Date.now()
+  let effectiveThreshold = chosenThreshold
+  let timestamps = await detectSceneTimestamps({
+    ffmpegPath,
+    inputPath,
+    threshold: effectiveThreshold,
+    crop,
+    timeoutMs,
+    segments,
     workers,
   })
-  const extractElapsedMs = logSlidesTiming(
-    `extract frames (count=${trimmed.length}, parallel=${workers})`,
-    extractFramesStartedAt
+  logSlidesTiming(
+    `scene detection base (threshold=${effectiveThreshold}, segments=${segments.length})`,
+    detectStartedAt
   )
-  if (trimmed.length > 0) {
-    logSlides(`extract frames avgMsPerFrame=${Math.round(extractElapsedMs / trimmed.length)}`)
+
+  if (timestamps.length === 0) {
+    const fallbackThreshold = Math.max(0.05, roundThreshold(effectiveThreshold * 0.5))
+    if (fallbackThreshold !== effectiveThreshold) {
+      const retryStartedAt = Date.now()
+      timestamps = await detectSceneTimestamps({
+        ffmpegPath,
+        inputPath,
+        threshold: fallbackThreshold,
+        crop,
+        timeoutMs,
+        segments,
+        workers,
+      })
+      logSlidesTiming(
+        `scene detection retry (threshold=${fallbackThreshold}, segments=${segments.length})`,
+        retryStartedAt
+      )
+      warnings.push(
+        `Scene detection retry used lower threshold ${fallbackThreshold} after zero detections`
+      )
+      if (timestamps.length > 0) {
+        effectiveThreshold = fallbackThreshold
+      }
+    }
   }
-  const filtered = applyMinDurationFilter(extracted, minDurationSeconds, warnings)
-  return { slides: filtered, autoTune }
+
+  const autoTune: SlideAutoTune = autoTuneThreshold
+    ? {
+        enabled: true,
+        chosenThreshold: timestamps.length > 0 ? effectiveThreshold : baseThreshold,
+        confidence: calibration.confidence,
+        strategy: roi ? 'llm-roi' : 'hash',
+        roi,
+      }
+    : {
+        enabled: false,
+        chosenThreshold: baseThreshold,
+        confidence: 0,
+        strategy: 'none',
+        roi: null,
+      }
+
+  return { timestamps, autoTune }
 }
 
 async function extractFramesAtTimestamps({
@@ -505,6 +629,107 @@ function clamp(value: number, min: number, max: number): number {
   if (value < min) return min
   if (value > max) return max
   return value
+}
+
+function buildCalibrationSampleTimestamps(
+  durationSeconds: number | null,
+  sampleCount: number
+): number[] {
+  if (!durationSeconds || durationSeconds <= 0) return [0]
+  const clamped = Math.max(3, Math.min(12, Math.round(sampleCount)))
+  const startRatio = 0.05
+  const endRatio = 0.95
+  if (clamped === 1) {
+    return [clamp(durationSeconds * 0.5, 0, durationSeconds - 0.1)]
+  }
+  const step = (endRatio - startRatio) / (clamped - 1)
+  const points: number[] = []
+  for (let i = 0; i < clamped; i += 1) {
+    const ratio = startRatio + step * i
+    points.push(clamp(durationSeconds * ratio, 0, durationSeconds - 0.1))
+  }
+  return points
+}
+
+function computeDiffStats(values: number[]): {
+  median: number
+  p75: number
+  p90: number
+  max: number
+} {
+  if (values.length === 0) {
+    return { median: 0, p75: 0, p90: 0, max: 0 }
+  }
+  const sorted = [...values].sort((a, b) => a - b)
+  const at = (p: number) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(p)))] ?? 0
+  const median = at((sorted.length - 1) * 0.5)
+  const p75 = at((sorted.length - 1) * 0.75)
+  const p90 = at((sorted.length - 1) * 0.9)
+  const max = sorted[sorted.length - 1] ?? 0
+  return { median, p75, p90, max }
+}
+
+function roundThreshold(value: number): number {
+  return Math.round(value * 100) / 100
+}
+
+async function calibrateSceneThreshold({
+  ffmpegPath,
+  inputPath,
+  crop,
+  durationSeconds,
+  sampleCount,
+  timeoutMs,
+}: {
+  ffmpegPath: string
+  inputPath: string
+  crop: CropRect | null
+  durationSeconds: number | null
+  sampleCount: number
+  timeoutMs: number
+}): Promise<{ threshold: number; confidence: number }> {
+  const timestamps = buildCalibrationSampleTimestamps(durationSeconds, sampleCount)
+  if (timestamps.length < 2) {
+    return { threshold: 0.2, confidence: 0 }
+  }
+
+  const hashes: Uint8Array[] = []
+  for (const timestamp of timestamps) {
+    const hash = await hashFrameAtTimestamp({
+      ffmpegPath,
+      inputPath,
+      timestamp,
+      crop,
+      timeoutMs,
+    })
+    if (hash) hashes.push(hash)
+  }
+
+  const diffs: number[] = []
+  for (let i = 1; i < hashes.length; i += 1) {
+    const diff = computeHashDistanceRatio(hashes[i - 1], hashes[i])
+    diffs.push(diff)
+  }
+
+  const stats = computeDiffStats(diffs)
+  const scaledMedian = stats.median * 0.15
+  const scaledP75 = stats.p75 * 0.2
+  const scaledP90 = stats.p90 * 0.25
+  let threshold = roundThreshold(Math.max(scaledMedian, scaledP75, scaledP90))
+  if (stats.p75 >= 0.12) {
+    threshold = Math.min(threshold, 0.05)
+  } else if (stats.p90 < 0.05) {
+    threshold = 0.05
+  }
+  threshold = clamp(threshold, 0.05, 0.3)
+  const confidence =
+    diffs.length >= 2 ? clamp(stats.p75 / 0.25, 0, 1) : clamp(stats.max / 0.25, 0, 1)
+  logSlides(
+    `calibration samples=${timestamps.length} diffs=${diffs.length} median=${stats.median.toFixed(
+      3
+    )} p75=${stats.p75.toFixed(3)} threshold=${threshold}`
+  )
+  return { threshold, confidence }
 }
 
 function resolveCropFromRoi(
@@ -818,10 +1043,6 @@ function mergeRois(rois: SlideRoi[]): SlideRoi | null {
   }
 }
 
-function roundThreshold(value: number): number {
-  return Math.round(value * 100) / 100
-}
-
 function buildSegments(
   durationSeconds: number | null,
   workers: number
@@ -840,73 +1061,6 @@ function buildSegments(
     segments.push({ start, duration })
   }
   return segments
-}
-
-async function detectSceneTimestampsAdaptive({
-  ffmpegPath,
-  inputPath,
-  threshold,
-  minThreshold,
-  targetMinSlides,
-  timeoutMs,
-  crop,
-  warnings,
-  durationSeconds,
-  workers,
-}: {
-  ffmpegPath: string
-  inputPath: string
-  threshold: number
-  minThreshold: number
-  targetMinSlides: number
-  timeoutMs: number
-  crop: CropRect | null
-  warnings: string[]
-  durationSeconds: number | null
-  workers: number
-}): Promise<{ threshold: number; timestamps: number[]; confidence: number }> {
-  const segments = buildSegments(durationSeconds, workers)
-  const detectOnce = async (value: number) =>
-    detectSceneTimestamps({
-      ffmpegPath,
-      inputPath,
-      threshold: value,
-      crop,
-      timeoutMs,
-      segments,
-      workers,
-    })
-
-  const baseStart = Date.now()
-  let chosen = threshold
-  let timestamps = await detectOnce(chosen)
-  logSlidesTiming(
-    `scene detection base (threshold=${chosen}, segments=${segments.length})`,
-    baseStart
-  )
-
-  if (timestamps.length < targetMinSlides && chosen > minThreshold) {
-    const retryThreshold = Math.max(minThreshold, roundThreshold(chosen * 0.5))
-    if (retryThreshold !== chosen) {
-      const retryStart = Date.now()
-      const retry = await detectOnce(retryThreshold)
-      logSlidesTiming(
-        `scene detection retry (threshold=${retryThreshold}, segments=${segments.length})`,
-        retryStart
-      )
-      if (retry.length > timestamps.length) {
-        chosen = retryThreshold
-        timestamps = retry
-      }
-    }
-  }
-
-  if (timestamps.length === 0) {
-    warnings.push('Scene detection did not find any candidate slide changes.')
-  }
-
-  const confidence = clamp(timestamps.length / Math.max(1, targetMinSlides), 0, 1)
-  return { threshold: chosen, timestamps, confidence }
 }
 
 async function detectSceneTimestamps({
@@ -970,6 +1124,72 @@ async function detectSceneTimestamps({
   const merged = results.flat()
   merged.sort((a, b) => a - b)
   return merged
+}
+
+async function hashFrameAtTimestamp({
+  ffmpegPath,
+  inputPath,
+  timestamp,
+  crop,
+  timeoutMs,
+}: {
+  ffmpegPath: string
+  inputPath: string
+  timestamp: number
+  crop: CropRect | null
+  timeoutMs: number
+}): Promise<Uint8Array | null> {
+  const cropFilter = crop ? `crop=${crop.width}:${crop.height}:${crop.x}:${crop.y}` : null
+  const filter = cropFilter ? `${cropFilter},scale=32:32,format=gray` : 'scale=32:32,format=gray'
+  const args = [
+    '-hide_banner',
+    '-ss',
+    String(timestamp),
+    '-i',
+    inputPath,
+    '-frames:v',
+    '1',
+    '-vf',
+    filter,
+    '-f',
+    'rawvideo',
+    '-pix_fmt',
+    'gray',
+    '-',
+  ]
+  try {
+    const buffer = await runProcessCaptureBuffer({
+      command: ffmpegPath,
+      args,
+      timeoutMs,
+      errorLabel: 'ffmpeg',
+    })
+    if (buffer.length < 1024) return null
+    const bytes = buffer.subarray(0, 1024)
+    return buildAverageHash(bytes)
+  } catch {
+    return null
+  }
+}
+
+function buildAverageHash(pixels: Uint8Array): Uint8Array {
+  let sum = 0
+  for (const value of pixels) sum += value
+  const avg = sum / pixels.length
+  const bits = new Uint8Array(pixels.length)
+  for (let i = 0; i < pixels.length; i += 1) {
+    bits[i] = pixels[i] >= avg ? 1 : 0
+  }
+  return bits
+}
+
+function computeHashDistanceRatio(a: Uint8Array, b: Uint8Array): number {
+  const len = Math.min(a.length, b.length)
+  let diff = 0
+  for (let i = 0; i < len; i += 1) {
+    if (a[i] !== b[i]) diff += 1
+  }
+  return len === 0 ? 0 : diff / len
 }
 
 async function probeVideoInfo({
@@ -1173,6 +1393,58 @@ async function runProcessCapture({
       clearTimeout(timeout)
       if (code === 0) {
         resolve(stdout)
+        return
+      }
+      const suffix = stderr.trim() ? `: ${stderr.trim()}` : ''
+      reject(new Error(`${errorLabel} exited with code ${code}${suffix}`))
+    })
+  })
+}
+
+async function runProcessCaptureBuffer({
+  command,
+  args,
+  timeoutMs,
+  errorLabel,
+}: {
+  command: string
+  args: string[]
+  timeoutMs: number
+  errorLabel: string
+}): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+    const chunks: Buffer[] = []
+    let stderr = ''
+
+    const timeout = setTimeout(() => {
+      proc.kill('SIGKILL')
+      reject(new Error(`${errorLabel} timed out`))
+    }, timeoutMs)
+
+    if (proc.stdout) {
+      proc.stdout.on('data', (chunk: Buffer) => {
+        chunks.push(chunk)
+      })
+    }
+    if (proc.stderr) {
+      proc.stderr.setEncoding('utf8')
+      proc.stderr.on('data', (chunk: string) => {
+        if (stderr.length < 8192) {
+          stderr += chunk
+        }
+      })
+    }
+
+    proc.on('error', (error) => {
+      clearTimeout(timeout)
+      reject(error)
+    })
+
+    proc.on('close', (code) => {
+      clearTimeout(timeout)
+      if (code === 0) {
+        resolve(Buffer.concat(chunks))
         return
       }
       const suffix = stderr.trim() ? `: ${stderr.trim()}` : ''
