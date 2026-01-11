@@ -5,8 +5,10 @@ import type { AssistantMessage, Tool } from '@mariozechner/pi-ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { completeAgentResponse } from '../src/daemon/agent.js'
 
-const mockCompleteSimple = vi.fn()
-const mockGetModel = vi.fn()
+const { mockCompleteSimple, mockGetModel } = vi.hoisted(() => ({
+  mockCompleteSimple: vi.fn(),
+  mockGetModel: vi.fn(),
+}))
 
 vi.mock('@mariozechner/pi-ai', () => {
   return {
@@ -159,7 +161,8 @@ describe('daemon/agent', () => {
 
     const context = mockCompleteSimple.mock.calls[0]?.[1] as { tools?: Tool[] }
     const navigate = context.tools?.find((tool) => tool.name === 'navigate')
-    const properties = (navigate?.parameters as { properties?: Record<string, unknown> })?.properties
+    const properties = (navigate?.parameters as { properties?: Record<string, unknown> })
+      ?.properties
     expect(properties && 'listTabs' in properties).toBe(true)
     expect(properties && 'switchToTab' in properties).toBe(true)
   })

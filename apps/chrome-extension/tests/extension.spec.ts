@@ -7,8 +7,14 @@ import type { BrowserContext, Page, Worker } from '@playwright/test'
 import { chromium, expect, test } from '@playwright/test'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const extensionPath = path.resolve(__dirname, '..', '.output', 'chrome-mv3')
+const extensionOutputDir = process.env.EXTENSION_OUTPUT_DIR ?? 'chrome-mv3'
+const extensionPath = path.resolve(__dirname, '..', '.output', extensionOutputDir)
 const consoleErrorAllowlist: RegExp[] = []
+
+test.skip(
+  ({ browserName }) => browserName === 'firefox',
+  'Playwright does not support Firefox extensions yet.'
+)
 
 type ExtensionHarness = {
   context: BrowserContext
@@ -1476,7 +1482,9 @@ test('options disables automation permissions button when granted', async () => 
     await page.waitForSelector('#pickersRoot')
 
     await expect(page.locator('#automationPermissions')).toBeDisabled()
-    await expect(page.locator('#automationPermissions')).toHaveText('Automation permissions granted')
+    await expect(page.locator('#automationPermissions')).toHaveText(
+      'Automation permissions granted'
+    )
     await expect(page.locator('#userScriptsNotice')).toBeHidden()
     assertNoErrors(harness)
   } finally {
