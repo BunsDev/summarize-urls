@@ -179,7 +179,7 @@ export async function completeOpenAiDocument({
           {
             type: 'input_file',
             filename,
-            file_data: bytesToBase64(document.bytes),
+            file_data: `data:${document.mediaType};base64,${bytesToBase64(document.bytes)}`,
           },
           { type: 'input_text', text: promptText },
         ],

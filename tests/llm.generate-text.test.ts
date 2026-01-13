@@ -317,7 +317,7 @@ describe('llm generate/stream', () => {
     const body = JSON.parse(String(options.body))
     expect(body.model).toBe('gpt-5.2')
     expect(body.input?.[0]?.content?.[0]?.type).toBe('input_file')
-    expect(body.input?.[0]?.content?.[0]?.file_data).toBeTypeOf('string')
+    expect(body.input?.[0]?.content?.[0]?.file_data).toMatch(/^data:application\/pdf;base64,/)
   })
 
   it('uses Gemini inline data for PDF prompts', async () => {

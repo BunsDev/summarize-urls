@@ -87,7 +87,7 @@ describe('cli asset inputs (local file)', () => {
         }
         const fileBlock = body.input?.[0]?.content?.[0]
         expect(fileBlock?.type).toBe('input_file')
-        expect(fileBlock?.file_data).toBeTruthy()
+        expect(fileBlock?.file_data).toMatch(/^data:application\/pdf;base64,/)
         return new Response(JSON.stringify({ output_text: 'OK' }), {
           status: 200,
           headers: { 'content-type': 'application/json' },

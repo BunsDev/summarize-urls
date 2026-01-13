@@ -241,6 +241,7 @@ describe('cli preprocess / markitdown integration', () => {
     const options = fetchMock.mock.calls[0]?.[1] as RequestInit
     const body = JSON.parse(String(options.body))
     expect(body.input?.[0]?.content?.[0]?.type).toBe('input_file')
+    expect(body.input?.[0]?.content?.[0]?.file_data).toMatch(/^data:application\/pdf;base64,/)
   })
 
   it('errors when --preprocess off is used for PDFs (no binary attachments)', async () => {
