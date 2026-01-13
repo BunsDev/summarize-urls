@@ -82,7 +82,7 @@ Defined in `apps/chrome-extension/wxt.config.ts` and requested via Options:
 }
 ```
 
-**Response (SSE)**
+**Response (SSE, default)**
 ```
 event: chunk
 data: { "text": "..." }
@@ -95,6 +95,12 @@ data: {}
 
 event: error
 data: { "message": "..." }
+```
+
+**Response (JSON)**
+Use `Accept: application/json` or `?format=json`.
+```
+{ "ok": true, "assistant": { /* AssistantMessage */ } }
 ```
 
 ### `POST /v1/agent/history`

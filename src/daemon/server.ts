@@ -14,7 +14,7 @@ import { encodeSseEvent, type SseEvent, type SseSlidesData } from '../shared/sse
 import type { SlideExtractionResult, SlideSettings } from '../slides/index.js'
 import { resolveSlideSettings } from '../slides/index.js'
 import { resolvePackageVersion } from '../version.js'
-import { completeAgentResponse } from './agent.js'
+import { completeAgentResponse, streamAgentResponse } from './agent.js'
 import { type DaemonRequestedMode, resolveAutoDaemonMode } from './auto-mode.js'
 import type { DaemonConfig } from './config.js'
 import { DAEMON_HOST, DAEMON_PORT_DEFAULT } from './constants.js'
@@ -113,6 +113,16 @@ async function readJsonBody(req: http.IncomingMessage, maxBytes: number): Promis
   }
   const text = Buffer.concat(chunks).toString('utf8')
   return JSON.parse(text)
+}
+
+function wantsJsonResponse(req: http.IncomingMessage, url: URL): boolean {
+  const format = url.searchParams.get('format')
+  if (format && format.toLowerCase() === 'json') return true
+  const accept = req.headers.accept
+  if (typeof accept !== 'string') return false
+  const lower = accept.toLowerCase()
+  if (lower.includes('text/event-stream')) return false
+  return lower.includes('application/json')
 }
 
 function parseDiagnostics(raw: unknown): { includeContent: boolean } {
@@ -877,8 +887,49 @@ export async function runDaemonServer({
           return
         }
 
+        const wantsJson = wantsJsonResponse(req, url)
+        if (wantsJson) {
+          try {
+            const assistant = await completeAgentResponse({
+              env,
+              pageUrl,
+              pageTitle,
+              pageContent,
+              messages,
+              modelOverride:
+                modelOverride && modelOverride.toLowerCase() !== 'auto' ? modelOverride : null,
+              tools,
+              automationEnabled,
+            })
+            json(res, 200, { ok: true, assistant }, cors)
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error)
+            console.error('[summarize-daemon] agent failed', error)
+            json(res, 500, { ok: false, error: message }, cors)
+          }
+          return
+        }
+
+        res.writeHead(200, {
+          'content-type': 'text/event-stream; charset=utf-8',
+          'cache-control': 'no-cache',
+          connection: 'keep-alive',
+          'x-accel-buffering': 'no',
+          ...cors,
+        })
+
+        const controller = new AbortController()
+        const abort = () => controller.abort()
+        req.on('close', abort)
+        res.on('close', abort)
+
+        const writeEvent = (event: SseEvent) => {
+          if (res.writableEnded) return
+          res.write(encodeSseEvent(event))
+        }
+
         try {
-          const assistant = await completeAgentResponse({
+          await streamAgentResponse({
             env,
             pageUrl,
             pageTitle,
@@ -888,12 +939,19 @@ export async function runDaemonServer({
               modelOverride && modelOverride.toLowerCase() !== 'auto' ? modelOverride : null,
             tools,
             automationEnabled,
+            onChunk: (text) => writeEvent({ event: 'chunk', data: { text } }),
+            onAssistant: (assistant) => writeEvent({ event: 'assistant', data: assistant }),
+            signal: controller.signal,
           })
-          json(res, 200, { ok: true, assistant }, cors)
+          writeEvent({ event: 'done', data: {} })
+          res.end()
         } catch (error) {
+          if (controller.signal.aborted) return
           const message = error instanceof Error ? error.message : String(error)
           console.error('[summarize-daemon] agent failed', error)
-          json(res, 500, { ok: false, error: message }, cors)
+          writeEvent({ event: 'error', data: { message } })
+          writeEvent({ event: 'done', data: {} })
+          res.end()
         }
         return
       }

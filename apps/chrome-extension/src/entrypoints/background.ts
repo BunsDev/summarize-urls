@@ -9,6 +9,7 @@ import {
   parseArtifact,
   upsertArtifact,
 } from '../automation/artifacts-store'
+import { readAgentResponse } from '../lib/agent-response'
 import { buildChatPageContent } from '../lib/chat-context'
 import { buildDaemonRequestBody, buildSummarizeRequestBody } from '../lib/daemon-payload'
 import { createDaemonRecovery, isDaemonUnreachableError } from '../lib/daemon-recovery'
@@ -1347,6 +1348,7 @@ export default defineBackground(() => {
               headers: {
                 Authorization: `Bearer ${settings.token.trim()}`,
                 'content-type': 'application/json',
+                Accept: 'text/event-stream',
               },
               body: JSON.stringify({
                 url: cachedExtract.url,
@@ -1371,53 +1373,24 @@ export default defineBackground(() => {
                 : rawText.trim() || `${res.status} ${res.statusText}`
               throw new Error(error)
             }
-            const contentType = res.headers.get('content-type') ?? ''
-            if (contentType.includes('application/json')) {
-              const json = (await res.json().catch(() => null)) as {
-                ok?: boolean
-                assistant?: AssistantMessage
-                error?: string
-              } | null
-              if (!json?.ok || !json.assistant) {
-                throw new Error(json?.error || 'Agent failed')
-              }
-              void send(session, {
-                type: 'agent:response',
-                requestId: agentPayload.requestId,
-                ok: true,
-                assistant: json.assistant,
-              })
-              sendStatus(session, '')
-              return
-            }
-            if (!res.body) {
-              throw new Error('Missing agent response body')
-            }
 
             let sawAssistant = false
-            for await (const raw of parseSseStream(res.body)) {
+            for await (const event of readAgentResponse(res)) {
               if (!isStillActive()) return
-              const event = parseSseEvent(raw)
-              if (!event) continue
-
-              if (event.event === 'chunk') {
+              if (event.type === 'chunk') {
                 void send(session, {
                   type: 'agent:chunk',
                   requestId: agentPayload.requestId,
-                  text: event.data.text,
+                  text: event.text,
                 })
-              } else if (event.event === 'assistant') {
+              } else if (event.type === 'assistant') {
                 sawAssistant = true
                 void send(session, {
                   type: 'agent:response',
                   requestId: agentPayload.requestId,
                   ok: true,
-                  assistant: event.data,
+                  assistant: event.assistant,
                 })
-              } else if (event.event === 'error') {
-                throw new Error(event.data.message)
-              } else if (event.event === 'done') {
-                break
               }
             }
 

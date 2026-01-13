@@ -178,7 +178,7 @@ Problem: daemon must be secured; extension must discover and pair with it.
     - `text?: string` (required for `mode: "page"`; optional for `auto`)
     - `truncated?: boolean` (optional; indicates extracted `text` was shortened)
   - 200 JSON: `{ ok: true, id }`
-- `POST /v1/agent` (SSE)
+- `POST /v1/agent` (SSE by default; JSON via `Accept: application/json` or `?format=json`)
   - Headers: `Authorization: Bearer <token>`
   - Body:
     - `url: string` (required)
