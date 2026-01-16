@@ -1548,6 +1548,18 @@ function applySlidesPayload(data: SseSlidesData) {
     renderInlineSlides(renderMarkdownHostEl, { fallback: true })
   }
   renderInlineSlides(chatMessagesEl)
+  queueSlidesRender()
+}
+
+const slidesTestHooks = (
+  globalThis as {
+    __summarizeTestHooks?: {
+      applySlidesPayload?: (payload: SseSlidesData) => void
+    }
+  }
+).__summarizeTestHooks
+if (slidesTestHooks) {
+  slidesTestHooks.applySlidesPayload = applySlidesPayload
 }
 
 async function requestSlidesContext() {

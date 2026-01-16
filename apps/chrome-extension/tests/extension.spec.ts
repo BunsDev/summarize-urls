@@ -461,7 +461,19 @@ test('sidepanel hides chat dock when chat is disabled', async ({
 
   try {
     await seedSettings(harness, { chatEnabled: false })
-    const page = await openExtensionPage(harness, 'sidepanel.html', '#title')
+    const page = await harness.context.newPage()
+    trackErrors(page, harness.pageErrors, harness.consoleErrors)
+    await page.addInitScript(() => {
+      ;(
+        window as typeof globalThis & { __summarizeTestHooks?: Record<string, unknown> }
+      ).__summarizeTestHooks = {}
+    })
+    await page.goto(getExtensionUrl(harness, 'sidepanel.html'), {
+      waitUntil: 'domcontentloaded',
+    })
+    await page.waitForSelector('#title')
+    await waitForPanelPort(page)
+    await waitForPanelPort(page)
     await expect(page.locator('#chatDock')).toBeHidden()
     await expect(page.locator('#chatContainer')).toBeHidden()
     assertNoErrors(harness)
@@ -854,20 +866,31 @@ test('sidepanel video selection forces transcript mode', async ({
     await mockDaemonSummarize(harness)
     await seedSettings(harness, { token: 'test-token', autoSummarize: false })
     const contentPage = await harness.context.newPage()
-    await contentPage.goto('https://example.com', { waitUntil: 'domcontentloaded' })
-    await contentPage.evaluate(() => {
-      document.body.innerHTML = `<article><p>${'Hello '.repeat(40)}</p></article>`
+    await contentPage.route('https://www.youtube.com/**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: { 'content-type': 'text/html' },
+        body: '<html><body><article>Video placeholder</article></body></html>',
+      })
+    })
+    await contentPage.goto('https://www.youtube.com/watch?v=abc123', {
+      waitUntil: 'domcontentloaded',
     })
     await maybeBringToFront(contentPage)
-    await activateTabByUrl(harness, 'https://example.com')
-    await waitForActiveTabUrl(harness, 'https://example.com')
-    await injectContentScript(harness, 'content-scripts/extract.js', 'https://example.com')
+    await activateTabByUrl(harness, 'https://www.youtube.com/watch?v=abc123')
+    await waitForActiveTabUrl(harness, 'https://www.youtube.com/watch?v=abc123')
+    await injectContentScript(
+      harness,
+      'content-scripts/extract.js',
+      'https://www.youtube.com/watch?v=abc123'
+    )
 
     const page = await openExtensionPage(harness, 'sidepanel.html', '#title')
     const mediaState = buildUiState({
-      tab: { id: 1, url: 'https://example.com', title: 'Example' },
+      tab: { id: 1, url: 'https://www.youtube.com/watch?v=abc123', title: 'Example' },
       media: { hasVideo: true, hasAudio: false, hasCaptions: false },
       stats: { pageWords: 120, videoDurationSeconds: 90 },
+      settings: { slidesEnabled: true },
       status: '',
     })
     await expect
@@ -897,7 +920,16 @@ test('sidepanel video selection forces transcript mode', async ({
     await activateTabByUrl(harness, 'https://example.com')
     await waitForActiveTabUrl(harness, 'https://example.com')
 
-    await sendPanelMessage(page, { type: 'panel:summarize', inputMode: 'video', refresh: false })
+    await sendBgMessage(harness, {
+      type: 'run:start',
+      run: {
+        id: 'run-1',
+        url: 'https://www.youtube.com/watch?v=abc123',
+        title: 'Example',
+        model: 'auto',
+        reason: 'manual',
+      },
+    })
     await expect.poll(() => getSummarizeCalls(harness)).toBe(1)
 
     const body = (await getSummarizeLastBody(harness)) as Record<string, unknown> | null
@@ -918,20 +950,32 @@ test('sidepanel video selection requests slides when enabled', async ({
     await mockDaemonSummarize(harness)
     await seedSettings(harness, { token: 'test-token', autoSummarize: false, slidesEnabled: true })
     const contentPage = await harness.context.newPage()
-    await contentPage.goto('https://example.com', { waitUntil: 'domcontentloaded' })
-    await contentPage.evaluate(() => {
-      document.body.innerHTML = `<article><p>${'Hello '.repeat(40)}</p></article>`
+    await contentPage.route('https://www.youtube.com/**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: { 'content-type': 'text/html' },
+        body: '<html><body><article>Video placeholder</article></body></html>',
+      })
+    })
+    await contentPage.goto('https://www.youtube.com/watch?v=dQw4w9WgXcQ', {
+      waitUntil: 'domcontentloaded',
     })
     await maybeBringToFront(contentPage)
-    await activateTabByUrl(harness, 'https://example.com')
-    await waitForActiveTabUrl(harness, 'https://example.com')
-    await injectContentScript(harness, 'content-scripts/extract.js', 'https://example.com')
+    await activateTabByUrl(harness, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+    await waitForActiveTabUrl(harness, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+    await injectContentScript(
+      harness,
+      'content-scripts/extract.js',
+      'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+    )
 
     const page = await openExtensionPage(harness, 'sidepanel.html', '#title')
+    await waitForPanelPort(page)
     const mediaState = buildUiState({
-      tab: { id: 1, url: 'https://example.com', title: 'Example' },
+      tab: { id: 1, url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', title: 'Example' },
       media: { hasVideo: true, hasAudio: false, hasCaptions: false },
       stats: { pageWords: 120, videoDurationSeconds: 90 },
+      settings: { slidesEnabled: true },
       status: '',
     })
     await expect
@@ -961,7 +1005,16 @@ test('sidepanel video selection requests slides when enabled', async ({
     await activateTabByUrl(harness, 'https://example.com')
     await waitForActiveTabUrl(harness, 'https://example.com')
 
-    await sendPanelMessage(page, { type: 'panel:summarize', inputMode: 'video', refresh: false })
+    await sendBgMessage(harness, {
+      type: 'run:start',
+      run: {
+        id: 'run-1',
+        url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        title: 'Example',
+        model: 'auto',
+        reason: 'manual',
+      },
+    })
     await expect.poll(() => getSummarizeCalls(harness)).toBe(1)
 
     const body = (await getSummarizeLastBody(harness)) as Record<string, unknown> | null
@@ -1035,6 +1088,129 @@ test('sidepanel video selection does not request slides when disabled', async ({
     expect(body?.videoMode).toBe('transcript')
     expect(body?.slides).toBeUndefined()
     expect(body?.slidesOcr).toBeUndefined()
+    assertNoErrors(harness)
+  } finally {
+    await closeExtension(harness.context, harness.userDataDir)
+  }
+})
+
+test('sidepanel loads slide images after they become ready', async ({
+  browserName: _browserName,
+}, testInfo) => {
+  const harness = await launchExtension(getBrowserFromProject(testInfo.project.name))
+
+  try {
+    await mockDaemonSummarize(harness)
+    await seedSettings(harness, { token: 'test-token', autoSummarize: false, slidesEnabled: true })
+    const contentPage = await harness.context.newPage()
+    await contentPage.goto('https://example.com', { waitUntil: 'domcontentloaded' })
+    await contentPage.evaluate(() => {
+      document.body.innerHTML = `<article><p>${'Hello '.repeat(40)}</p></article>`
+    })
+    await maybeBringToFront(contentPage)
+    await activateTabByUrl(harness, 'https://example.com')
+    await waitForActiveTabUrl(harness, 'https://example.com')
+    await injectContentScript(harness, 'content-scripts/extract.js', 'https://example.com')
+
+    const page = await openExtensionPage(harness, 'sidepanel.html', '#title')
+    const mediaState = buildUiState({
+      tab: { id: 1, url: 'https://example.com', title: 'Example' },
+      media: { hasVideo: true, hasAudio: false, hasCaptions: false },
+      stats: { pageWords: 120, videoDurationSeconds: 90 },
+      status: '',
+    })
+    await expect
+      .poll(async () => {
+        await sendBgMessage(harness, { type: 'ui:state', state: mediaState })
+        return await page.locator('.summarizeButton.isDropdown').count()
+      })
+      .toBe(1)
+
+    const summaryStream = [
+      'event: chunk',
+      'data: {"text":"Hello world"}',
+      '',
+      'event: done',
+      'data: {}',
+      '',
+    ].join('\n')
+    await page.route('http://127.0.0.1:8787/v1/summarize/**/events', async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: { 'content-type': 'text/event-stream' },
+        body: summaryStream,
+      })
+    })
+
+    const slidesPayload = {
+      sourceUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      sourceId: 'dQw4w9WgXcQ',
+      sourceKind: 'youtube',
+      ocrAvailable: false,
+      slides: [
+        {
+          index: 1,
+          timestamp: 0,
+          imageUrl: 'http://127.0.0.1:8787/v1/slides/dQw4w9WgXcQ/1?v=1',
+        },
+      ],
+    }
+    await page.waitForFunction(() => {
+      const hooks = (
+        window as typeof globalThis & {
+          __summarizeTestHooks?: { applySlidesPayload?: (payload: unknown) => void }
+        }
+      ).__summarizeTestHooks
+      return Boolean(hooks?.applySlidesPayload)
+    })
+
+    const placeholderPng = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO3kq0cAAAAASUVORK5CYII=',
+      'base64'
+    )
+    let imageCalls = 0
+    await page.route('http://127.0.0.1:8787/v1/slides/dQw4w9WgXcQ/1**', async (route) => {
+      imageCalls += 1
+      if (imageCalls < 2) {
+        await route.fulfill({
+          status: 200,
+          headers: {
+            'content-type': 'image/png',
+            'x-summarize-slide-ready': '0',
+          },
+          body: placeholderPng,
+        })
+        return
+      }
+      await route.fulfill({
+        status: 200,
+        headers: {
+          'content-type': 'image/png',
+          'x-summarize-slide-ready': '1',
+        },
+        body: placeholderPng,
+      })
+    })
+
+    await sendPanelMessage(page, { type: 'panel:summarize', inputMode: 'video', refresh: false })
+    await page.evaluate((payload) => {
+      const hooks = (
+        window as typeof globalThis & {
+          __summarizeTestHooks?: { applySlidesPayload?: (payload: unknown) => void }
+        }
+      ).__summarizeTestHooks
+      hooks?.applySlidesPayload?.(payload)
+    }, slidesPayload)
+
+    const img = page.locator('img.slideStrip__thumbImage, img.slideInline__thumbImage')
+    await expect(img).toHaveCount(1)
+    await img.scrollIntoViewIfNeeded()
+    await expect
+      .poll(async () => {
+        return await img.evaluate((node) => node.dataset.loaded === 'true' && node.src)
+      })
+      .toBeTruthy()
+    await expect.poll(() => imageCalls).toBeGreaterThan(1)
     assertNoErrors(harness)
   } finally {
     await closeExtension(harness.context, harness.userDataDir)

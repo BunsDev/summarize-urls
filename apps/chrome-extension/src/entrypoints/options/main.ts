@@ -75,26 +75,6 @@ const tabPanels = Array.from(document.querySelectorAll<HTMLElement>('[data-tab-p
 const tabStorageKey = 'summarize:options-tab'
 const tabIds = new Set(tabButtons.map((button) => button.dataset.tab).filter(Boolean))
 
-const setActiveTab = (next: string) => {
-  if (!tabIds.has(next)) return
-  for (const button of tabButtons) {
-    const isActive = button.dataset.tab === next
-    button.setAttribute('aria-selected', isActive ? 'true' : 'false')
-    button.tabIndex = isActive ? 0 : -1
-  }
-  for (const panel of tabPanels) {
-    const isActive = panel.dataset.tabPanel === next
-    panel.hidden = !isActive
-  }
-  localStorage.setItem(tabStorageKey, next)
-  if (next === 'logs') {
-    void refreshLogs()
-    if (logsAutoEl.checked) startLogsAuto()
-  } else {
-    stopLogsAuto()
-  }
-}
-
 let autoValue = defaultSettings.autoSummarize
 let chatEnabledValue = defaultSettings.chatEnabled
 let automationEnabledValue = defaultSettings.automationEnabled
@@ -217,37 +197,65 @@ async function refreshLogs(isAuto = false) {
   }
 }
 
+const setActiveTab = (tabId: string) => {
+  if (!tabIds.has(tabId)) return
+  for (const button of tabButtons) {
+    const isActive = button.dataset.tab === tabId
+    button.setAttribute('aria-selected', isActive ? 'true' : 'false')
+    button.tabIndex = isActive ? 0 : -1
+  }
+  for (const panel of tabPanels) {
+    const isActive = panel.dataset.tabPanel === tabId
+    panel.hidden = !isActive
+  }
+  localStorage.setItem(tabStorageKey, tabId)
+  if (tabId === 'logs') {
+    void refreshLogs()
+    if (logsAutoEl.checked) startLogsAuto()
+  } else {
+    stopLogsAuto()
+  }
+}
+
 const storedTab = localStorage.getItem(tabStorageKey)
 const initialTab = storedTab && tabIds.has(storedTab) ? storedTab : 'general'
 setActiveTab(initialTab)
 
-tabButtons.forEach((button) => {
+for (const button of tabButtons) {
   button.addEventListener('click', () => {
-    const tab = button.dataset.tab
-    if (tab) setActiveTab(tab)
+    const tabId = button.dataset.tab
+    if (tabId) setActiveTab(tabId)
   })
-})
+}
 
 tabsRoot.addEventListener('keydown', (event) => {
-  if (!(event instanceof KeyboardEvent)) return
-  const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End']
-  if (!keys.includes(event.key)) return
+  if (
+    !(event instanceof KeyboardEvent) ||
+    !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)
+  ) {
+    return
+  }
   event.preventDefault()
-  const currentIndex = tabButtons.findIndex(
+  const activeIndex = tabButtons.findIndex(
     (button) => button.getAttribute('aria-selected') === 'true'
   )
-  if (currentIndex < 0) return
+  if (activeIndex < 0) return
   const lastIndex = tabButtons.length - 1
-  let nextIndex = currentIndex
-  if (event.key === 'ArrowLeft') nextIndex = currentIndex === 0 ? lastIndex : currentIndex - 1
-  if (event.key === 'ArrowRight') nextIndex = currentIndex === lastIndex ? 0 : currentIndex + 1
-  if (event.key === 'Home') nextIndex = 0
-  if (event.key === 'End') nextIndex = lastIndex
+  let nextIndex = activeIndex
+  if (event.key === 'ArrowLeft') {
+    nextIndex = activeIndex === 0 ? lastIndex : activeIndex - 1
+  } else if (event.key === 'ArrowRight') {
+    nextIndex = activeIndex === lastIndex ? 0 : activeIndex + 1
+  } else if (event.key === 'Home') {
+    nextIndex = 0
+  } else if (event.key === 'End') {
+    nextIndex = lastIndex
+  }
   const nextButton = tabButtons[nextIndex]
   if (!nextButton) return
-  const nextTab = nextButton.dataset.tab
-  if (!nextTab) return
-  setActiveTab(nextTab)
+  const tabId = nextButton.dataset.tab
+  if (!tabId) return
+  setActiveTab(tabId)
   nextButton.focus()
 })
 
