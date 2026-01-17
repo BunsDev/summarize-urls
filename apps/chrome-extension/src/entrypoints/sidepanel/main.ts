@@ -249,7 +249,7 @@ let summarizeVideoDurationSeconds: number | null = null
 type SlideTextMode = 'transcript' | 'ocr'
 type TranscriptSegment = { startSeconds: number; text: string }
 let slidesBusy = false
-let slidesExpanded = false
+let slidesExpanded = true
 let slidesTextMode: SlideTextMode = 'transcript'
 let slidesTextToggleVisible = false
 let slidesTranscriptSegments: TranscriptSegment[] = []
@@ -1108,6 +1108,7 @@ function resetSummaryView({ preserveChat = false }: { preserveChat?: boolean } =
   panelState.summaryMarkdown = null
   panelState.summaryFromCache = null
   panelState.slides = null
+  slidesExpanded = true
   slidesContextPending = false
   slidesContextUrl = null
   slidesTranscriptSegments = []
