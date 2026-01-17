@@ -1,5 +1,5 @@
 import { Writable } from 'node:stream'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { runCli } from '../src/run.js'
 
@@ -49,6 +49,10 @@ const mocks = vi.hoisted(() => {
   }
 })
 
+const renderMocks = vi.hoisted(() => ({
+  renderSlidesInline: vi.fn(async () => ({ rendered: 1, protocol: 'kitty' })),
+}))
+
 vi.mock('../src/slides/index.js', async () => {
   const actual =
     await vi.importActual<typeof import('../src/slides/index.js')>('../src/slides/index.js')
@@ -59,7 +63,22 @@ vi.mock('../src/slides/index.js', async () => {
   }
 })
 
+vi.mock('../src/run/slides-render.js', async () => {
+  const actual =
+    await vi.importActual<typeof import('../src/run/slides-render.js')>(
+      '../src/run/slides-render.js'
+    )
+  return {
+    ...actual,
+    renderSlidesInline: renderMocks.renderSlidesInline,
+  }
+})
+
 describe('cli slides mode', () => {
+  afterEach(() => {
+    renderMocks.renderSlidesInline.mockClear()
+  })
+
   it('prints slide paths in text mode', async () => {
     const stdout = collectStream({ isTTY: false })
     const stderr = collectStream({ isTTY: false })
@@ -100,5 +119,53 @@ describe('cli slides mode', () => {
         stderr: stderr.stream,
       })
     ).rejects.toThrow('--render requires a TTY stdout.')
+  })
+
+  it('rejects unknown render modes', async () => {
+    const stdout = collectStream({ isTTY: false })
+    const stderr = collectStream({ isTTY: false })
+    await expect(
+      runCli(['slides', 'https://example.com/video.mp4', '--render', 'nope'], {
+        env: { HOME: '/tmp' },
+        fetch: globalThis.fetch.bind(globalThis),
+        stdout: stdout.stream,
+        stderr: stderr.stream,
+      })
+    ).rejects.toThrow("argument 'nope' is invalid")
+  })
+
+  it('rejects render with JSON output', async () => {
+    const stdout = collectStream({ isTTY: false })
+    const stderr = collectStream({ isTTY: false })
+    await expect(
+      runCli(['slides', 'https://example.com/video.mp4', '--json', '--render', 'auto'], {
+        env: { HOME: '/tmp' },
+        fetch: globalThis.fetch.bind(globalThis),
+        stdout: stdout.stream,
+        stderr: stderr.stream,
+      })
+    ).rejects.toThrow('--render is not supported with --json output.')
+  })
+
+  it('renders inline when stdout is a TTY', async () => {
+    const stdout = collectStream({ isTTY: true })
+    const stderr = collectStream({ isTTY: true })
+    await runCli(['slides', 'https://example.com/video.mp4', '--render', 'auto'], {
+      env: { HOME: '/tmp', TERM_PROGRAM: 'iTerm.app' },
+      fetch: globalThis.fetch.bind(globalThis),
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+    })
+
+    expect(renderMocks.renderSlidesInline).toHaveBeenCalledTimes(1)
+    const call = renderMocks.renderSlidesInline.mock.calls[0]?.[0]
+    expect(call?.mode).toBe('auto')
+    expect(call?.slides?.length).toBe(1)
+    const label = call?.labelForSlide?.({
+      index: 2,
+      timestamp: 3661,
+      imagePath: '/tmp/slides/slide_0002.png',
+    })
+    expect(label).toContain('01:01:01')
   })
 })
