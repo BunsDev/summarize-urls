@@ -8,6 +8,7 @@ import type { ExtractedLinkContent } from '../content/index.js'
 import { extractYouTubeVideoId, isDirectMediaUrl, isYouTubeUrl } from '../content/index.js'
 import { resolveExecutableInPath } from '../run/env.js'
 import type { SlideSettings } from './settings.js'
+import { readSlidesCacheIfValid, resolveSlidesDir } from './store.js'
 import type {
   SlideAutoTune,
   SlideExtractionResult,
@@ -200,12 +201,12 @@ export async function extractSlidesForSource({
   tesseractPath,
   hooks,
 }: ExtractSlidesArgs): Promise<SlideExtractionResult> {
-  const slidesDir = path.join(settings.outputDir, source.sourceId)
+  const slidesDir = resolveSlidesDir(settings.outputDir, source.sourceId)
   return withSlidesLock(
     slidesDir,
     async () => {
       if (!noCache) {
-        const cached = await readSlidesCacheIfValid({ slidesDir, source, settings })
+        const cached = await readSlidesCacheIfValid({ source, settings })
         if (cached) {
           return cached
         }
@@ -1929,46 +1930,6 @@ async function withSlidesLock<T>(
       slidesLocks.delete(key)
     }
   }
-}
-
-async function readSlidesCacheIfValid({
-  slidesDir,
-  source,
-  settings,
-}: {
-  slidesDir: string
-  source: SlideSource
-  settings: SlideSettings
-}): Promise<SlideExtractionResult | null> {
-  const payloadPath = path.join(slidesDir, 'slides.json')
-  let raw: string
-  try {
-    raw = await fs.readFile(payloadPath, 'utf8')
-  } catch {
-    return null
-  }
-  let parsed: SlideExtractionResult
-  try {
-    parsed = JSON.parse(raw) as SlideExtractionResult
-  } catch {
-    return null
-  }
-  if (!parsed || typeof parsed !== 'object') return null
-  if (parsed.sourceId !== source.sourceId) return null
-  if (parsed.sourceKind !== source.kind) return null
-  if (parsed.sourceUrl !== source.url) return null
-  if (parsed.slidesDir !== slidesDir) return null
-  if (parsed.sceneThreshold !== settings.sceneThreshold) return null
-  if (parsed.maxSlides !== settings.maxSlides) return null
-  if (parsed.minSlideDuration !== settings.minDurationSeconds) return null
-  if (parsed.ocrRequested !== settings.ocr) return null
-  if (!Array.isArray(parsed.slides) || parsed.slides.length === 0) return null
-  for (const slide of parsed.slides) {
-    if (!slide?.imagePath) return null
-    const stat = await fs.stat(slide.imagePath).catch(() => null)
-    if (!stat?.isFile()) return null
-  }
-  return parsed
 }
 
 async function runWithConcurrency<T>(

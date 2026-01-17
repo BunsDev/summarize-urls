@@ -1,5 +1,4 @@
 import { promises as fs } from 'node:fs'
-import path from 'node:path'
 
 import * as urlUtils from '@steipete/summarize-core/content/url'
 
@@ -14,6 +13,7 @@ import { createFirecrawlScraper } from '../../../firecrawl.js'
 import {
   extractSlidesForSource,
   resolveSlideSource,
+  validateSlidesCache,
   type SlideExtractionResult,
 } from '../../../slides/index.js'
 import { createOscProgressController } from '../../../tty/osc-progress.js'
@@ -344,30 +344,6 @@ export async function runUrlFlow({
       } as SlideExtractionResult
     }
 
-    const isCachedSlidesValid = async (
-      cached: SlideExtractionResult,
-      source: { sourceId: string; kind: string },
-      expectedSlidesDir: string
-    ): Promise<boolean> => {
-      if (!cached || cached.slides.length === 0) return false
-      if (cached.sourceId !== source.sourceId || cached.sourceKind !== source.kind) return false
-      if (!cached.slidesDir || cached.slidesDir !== expectedSlidesDir) return false
-      try {
-        await fs.stat(cached.slidesDir)
-      } catch {
-        return false
-      }
-      for (const slide of cached.slides) {
-        if (!slide.imagePath) return false
-        try {
-          await fs.stat(slide.imagePath)
-        } catch {
-          return false
-        }
-      }
-      return true
-    }
-
     const runSlidesExtraction = async (): Promise<SlideExtractionResult | null> => {
       if (!flags.slides) return null
       if (slidesExtracted) {
@@ -393,12 +369,14 @@ export async function runUrlFlow({
           cacheStore && cacheState.mode === 'default'
             ? buildSlidesCacheKey({ url: source.url, settings: flags.slides })
             : null
-        const expectedSlidesDir = path.join(flags.slides.outputDir, source.sourceId)
         if (slidesCacheKey && cacheStore) {
           const cached = cacheStore.getJson<SlideExtractionResult>('slides', slidesCacheKey)
-          if (cached && (await isCachedSlidesValid(cached, source, expectedSlidesDir))) {
+          const validated = cached
+            ? await validateSlidesCache({ cached, source, settings: flags.slides })
+            : null
+          if (validated) {
             writeVerbose(io.stderr, flags.verbose, 'cache hit slides', flags.verboseColor)
-            slidesExtracted = cached
+            slidesExtracted = validated
             ctx.hooks.onSlidesExtracted?.(slidesExtracted)
             ctx.hooks.onSlidesProgress?.('Slides: cached 100%')
             return slidesExtracted
