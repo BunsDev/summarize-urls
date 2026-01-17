@@ -917,8 +917,8 @@ test('sidepanel video selection forces transcript mode', async ({
     })
 
     await maybeBringToFront(contentPage)
-    await activateTabByUrl(harness, 'https://example.com')
-    await waitForActiveTabUrl(harness, 'https://example.com')
+    await activateTabByUrl(harness, 'https://www.youtube.com/watch?v=abc123')
+    await waitForActiveTabUrl(harness, 'https://www.youtube.com/watch?v=abc123')
 
     await sendBgMessage(harness, {
       type: 'run:start',
@@ -1002,8 +1002,8 @@ test('sidepanel video selection requests slides when enabled', async ({
     })
 
     await maybeBringToFront(contentPage)
-    await activateTabByUrl(harness, 'https://example.com')
-    await waitForActiveTabUrl(harness, 'https://example.com')
+    await activateTabByUrl(harness, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+    await waitForActiveTabUrl(harness, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
 
     await sendBgMessage(harness, {
       type: 'run:start',
@@ -1169,28 +1169,31 @@ test('sidepanel loads slide images after they become ready', async ({
       'base64'
     )
     let imageCalls = 0
-    await page.route('http://127.0.0.1:8787/v1/slides/dQw4w9WgXcQ/1**', async (route) => {
-      imageCalls += 1
-      if (imageCalls < 2) {
+    await harness.context.route(
+      'http://127.0.0.1:8787/v1/slides/dQw4w9WgXcQ/1**',
+      async (route) => {
+        imageCalls += 1
+        if (imageCalls < 2) {
+          await route.fulfill({
+            status: 200,
+            headers: {
+              'content-type': 'image/png',
+              'x-summarize-slide-ready': '0',
+            },
+            body: placeholderPng,
+          })
+          return
+        }
         await route.fulfill({
           status: 200,
           headers: {
             'content-type': 'image/png',
-            'x-summarize-slide-ready': '0',
+            'x-summarize-slide-ready': '1',
           },
           body: placeholderPng,
         })
-        return
       }
-      await route.fulfill({
-        status: 200,
-        headers: {
-          'content-type': 'image/png',
-          'x-summarize-slide-ready': '1',
-        },
-        body: placeholderPng,
-      })
-    })
+    )
 
     await sendPanelMessage(page, { type: 'panel:summarize', inputMode: 'video', refresh: false })
     await page.evaluate((payload) => {
