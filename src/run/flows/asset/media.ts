@@ -55,8 +55,24 @@ export async function summarizeMediaFile(
   // Check if basic transcription setup is available
   const openaiKey = ctx.env.OPENAI_API_KEY
   const falKey = ctx.env.FAL_KEY
-  const ytDlpPath = ctx.env.YT_DLP_PATH
+
+  // Helper to check if a binary is available on PATH
+  const isBinaryAvailable = async (binary: string): Promise<boolean> => {
+    const { spawn } = await import('node:child_process')
+    return new Promise<boolean>((resolve) => {
+      const proc = spawn(binary, ['--help'], { stdio: ['ignore', 'ignore', 'ignore'] })
+      proc.on('error', () => resolve(false))
+      proc.on('close', (code) => resolve(code === 0))
+    })
+  }
+
+  // Check for yt-dlp: either via env var or on PATH
+  const ytDlpPath = ctx.env.YT_DLP_PATH || (await isBinaryAvailable('yt-dlp') ? 'yt-dlp' : null)
+
+  // Check for whisper.cpp: either via env var or by checking if whisper-cli is on PATH
   const hasLocalWhisper = ctx.env.SUMMARIZE_WHISPER_CPP_BINARY
+    ? true
+    : await isBinaryAvailable('whisper-cli')
 
   const hasAnyTranscriptionProvider = openaiKey || falKey || hasLocalWhisper
 
@@ -71,7 +87,7 @@ export async function summarizeMediaFile(
 
 3. Local whisper.cpp (recommended, free):
    brew install ggerganov/ggerganov/whisper-cpp
-   Set SUMMARIZE_WHISPER_CPP_BINARY=/path/to/whisper-cli
+   Ensure whisper-cli is on your PATH (or set SUMMARIZE_WHISPER_CPP_BINARY)
 
 See: https://github.com/openai/whisper for setup details`)
   }
