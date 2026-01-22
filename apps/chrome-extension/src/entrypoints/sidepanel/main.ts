@@ -1435,7 +1435,21 @@ function rebuildSlideDescriptions() {
   for (let i = 0; i < slides.length; i += 1) {
     const slide = slides[i]
     if (hasSummary) {
-      slideDescriptions.set(slide.index, slideSummaryByIndex.get(slide.index) ?? '')
+      const summaryText = slideSummaryByIndex.get(slide.index) ?? ''
+      if (summaryText.trim()) {
+        slideDescriptions.set(slide.index, summaryText)
+        continue
+      }
+      if (slidesTextMode === 'ocr') {
+        slideDescriptions.set(slide.index, getOcrTextForSlide(slide, budget))
+        continue
+      }
+      if (holdTranscriptFallback) {
+        slideDescriptions.set(slide.index, '')
+        continue
+      }
+      const transcriptText = fallbackSummaries.get(slide.index) ?? ''
+      slideDescriptions.set(slide.index, transcriptText)
       continue
     }
     if (slidesTextMode === 'ocr') {
@@ -1447,10 +1461,6 @@ function rebuildSlideDescriptions() {
       continue
     }
     const transcriptText = fallbackSummaries.get(slide.index) ?? ''
-    if (!transcriptText) {
-      slideDescriptions.set(slide.index, getOcrTextForSlide(slide, budget))
-      continue
-    }
     slideDescriptions.set(slide.index, transcriptText)
   }
 }
